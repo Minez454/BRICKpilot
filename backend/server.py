@@ -949,56 +949,249 @@ async def generate_hud_report(current_user: User = Depends(get_current_user)):
     total_documents = await db.vault.count_documents({})
     
     # Get dossier statistics
-    all_dossiers = await db.dossier.find({}, {"_id": 0, "category": 1}).to_list(10000)
+    all_dossiers = await db.dossier.find({}, {"_id": 0, "category": 1, "user_id": 1}).to_list(10000)
     dossier_by_category = _group_by_category(all_dossiers)
+    
+    # Get unique users with dossier entries (actively engaged)
+    users_with_dossier = len(set([d.get('user_id') for d in all_dossiers]))
+    
+    # Get housing outcomes (users who have housing entries)
+    housing_entries = [d for d in all_dossiers if d.get('category') == 'housing']
+    users_with_housing_info = len(set([d.get('user_id') for d in housing_entries]))
     
     # Get resource access
     resource_views = await db.resources.count_documents({})
     
+    # Get flashcard completion (indicates engagement)
+    flashcard_completion = await db.flashcards.count_documents({"user_answer": {"$ne": None}})
+    total_flashcards = await db.flashcards.count_documents({})
+    
+    # Get all users with detailed info for demographics
+    all_users = await db.users.find({"role": "user"}, {"_id": 0}).to_list(10000)
+    
     return {
         "report_date": datetime.now(timezone.utc).isoformat(),
+        "reporting_period": "All Time",
+        "organization": current_user.organization or "BRICK Platform",
+        "generated_by": current_user.full_name,
+        
+        # HUD Point-in-Time Count Data
         "total_clients": total_users,
         "veteran_clients": veterans,
-        "veteran_percentage": (veterans / total_users * 100) if total_users > 0 else 0,
+        "veteran_percentage": round((veterans / total_users * 100) if total_users > 0 else 0, 2),
+        
+        # Engagement & Service Utilization
         "active_users_30_days": len(active_users_30d),
-        "engagement_rate": (len(active_users_30d) / total_users * 100) if total_users > 0 else 0,
+        "engagement_rate": round((len(active_users_30d) / total_users * 100) if total_users > 0 else 0, 2),
+        "users_with_case_files": users_with_dossier,
+        "case_file_completion_rate": round((users_with_dossier / total_users * 100) if total_users > 0 else 0, 2),
+        
+        # Service Delivery Metrics
         "workbook_tasks_completed": total_tasks_completed,
         "documents_stored": total_documents,
+        "flashcard_completion_rate": round((flashcard_completion / total_flashcards * 100) if total_flashcards > 0 else 0, 2),
+        
+        # Case Notes by Category (shows service areas)
         "case_notes_by_category": dossier_by_category,
+        "users_with_housing_information": users_with_housing_info,
+        
+        # Resources & Infrastructure
         "resources_available": resource_views,
-        "generated_by": current_user.full_name,
-        "organization": current_user.organization or "BRICK Platform"
+        "platform_features": ["AI Caseworker", "Resource Mapping", "Document Vault", "Legal Aid", "Workbook", "Unified Case Management"],
+        
+        # For HUD APR (Annual Performance Report)
+        "data_quality": {
+            "complete_profiles": users_with_dossier,
+            "incomplete_profiles": total_users - users_with_dossier,
+            "data_completeness_percentage": round((users_with_dossier / total_users * 100) if total_users > 0 else 0, 2)
+        }
     }
 
-@api_router.post("/caseworker/client/{client_id}/note")
-async def add_caseworker_note(client_id: str, note: Dict[str, str], current_user: User = Depends(get_current_user)):
+@api_router.get("/agency/clients/unified")
+async def get_unified_client_list(current_user: User = Depends(get_current_user)):
+    """Get all clients with data from ALL agencies - unified view"""
     if current_user.role not in ["caseworker", "agency_staff"]:
-        raise HTTPException(status_code=403, detail="Only caseworkers can add notes")
+        raise HTTPException(status_code=403, detail="Only agency staff can access unified client list")
+    
+    # Get all users (clients)
+    users = await db.users.find({"role": "user"}, {"_id": 0, "password_hash": 0}).to_list(10000)
+    
+    unified_clients = []
+    for user_data in users:
+        user_id = user_data.get('id')
+        
+        # Get complete dossier from ALL agencies
+        dossier_items = await db.dossier.count_documents({"user_id": user_id})
+        
+        # Get last activity
+        last_chat = await db.chat_messages.find_one(
+            {"user_id": user_id},
+            {"_id": 0, "created_at": 1},
+            sort=[("created_at", -1)]
+        )
+        
+        # Get workbook progress
+        total_tasks = await db.workbook_tasks.count_documents({"user_id": user_id})
+        completed_tasks = await db.workbook_tasks.count_documents({"user_id": user_id, "completed": True})
+        
+        # Get documents in vault
+        documents_count = await db.vault.count_documents({"user_id": user_id})
+        
+        # Get agencies that have worked with this client
+        agencies_worked = await db.dossier.distinct("source", {"user_id": user_id})
+        caseworker_notes_count = await db.caseworker_notes.count_documents({"client_id": user_id})
+        
+        # Get last known housing situation from dossier
+        housing_info = await db.dossier.find_one(
+            {"user_id": user_id, "category": "housing"},
+            {"_id": 0, "content": 1, "created_at": 1},
+            sort=[("created_at", -1)]
+        )
+        
+        unified_clients.append({
+            "client_info": user_data,
+            "engagement": {
+                "dossier_entries": dossier_items,
+                "last_active": last_chat.get("created_at") if last_chat else None,
+                "workbook_completion": f"{completed_tasks}/{total_tasks}" if total_tasks > 0 else "0/0",
+                "documents_uploaded": documents_count
+            },
+            "inter_agency_data": {
+                "agencies_served_by": agencies_worked,
+                "caseworker_notes_count": caseworker_notes_count,
+                "last_known_location": housing_info.get("content") if housing_info else "Not recorded"
+            }
+        })
+    
+    return {
+        "total_clients": len(unified_clients),
+        "clients": unified_clients,
+        "data_sharing_enabled": True,
+        "organization": current_user.organization
+    }
+
+@api_router.get("/agency/client/{client_id}/complete-history")
+async def get_client_complete_history(client_id: str, current_user: User = Depends(get_current_user)):
+    """Get COMPLETE client history across ALL agencies"""
+    if current_user.role not in ["caseworker", "agency_staff", "legal_aid"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get client basic info
+    client = await db.users.find_one({"id": client_id, "role": "user"}, {"_id": 0, "password_hash": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get ALL dossier entries from ALL agencies
+    dossier = await db.dossier.find({"user_id": client_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Get ALL caseworker notes from ALL agencies
+    all_notes = await db.caseworker_notes.find({"client_id": client_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Group notes by organization
+    notes_by_org = {}
+    for note in all_notes:
+        org = note.get("organization", "Unknown")
+        if org not in notes_by_org:
+            notes_by_org[org] = []
+        notes_by_org[org].append(note)
+    
+    # Get workbook/tasks data
+    all_tasks = await db.workbook_tasks.find({"user_id": client_id}, {"_id": 0}).to_list(1000)
+    
+    # Get flashcard answers
+    flashcard_answers = await db.flashcards.find(
+        {"user_id": client_id, "user_answer": {"$ne": None}},
+        {"_id": 0, "question": 1, "user_answer": 1, "category": 1, "answered_at": 1}
+    ).to_list(1000)
+    
+    # Get documents (metadata only, not actual files)
+    documents = await db.vault.find({"user_id": client_id}, {"_id": 0, "file_data": 0}).to_list(1000)
+    
+    # Get chat history (limited to recent for privacy)
+    recent_chats = await db.chat_messages.find(
+        {"user_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    # Build service timeline (all interactions across ALL agencies)
+    timeline = []
+    
+    # Add dossier entries to timeline
+    for entry in dossier:
+        timeline.append({
+            "date": entry.get("created_at"),
+            "type": "dossier_entry",
+            "category": entry.get("category"),
+            "source": entry.get("source"),
+            "title": entry.get("title"),
+            "content": entry.get("content")
+        })
+    
+    # Add caseworker notes to timeline
+    for note in all_notes:
+        timeline.append({
+            "date": note.get("created_at"),
+            "type": "caseworker_note",
+            "organization": note.get("organization"),
+            "caseworker": note.get("caseworker_name"),
+            "note": note.get("note"),
+            "category": note.get("category")
+        })
+    
+    # Sort timeline by date
+    timeline.sort(key=lambda x: x.get("date", ""), reverse=True)
+    
+    return {
+        "client": client,
+        "summary": {
+            "total_dossier_entries": len(dossier),
+            "agencies_involved": len(set([n.get("organization") for n in all_notes])),
+            "total_caseworker_notes": len(all_notes),
+            "documents_on_file": len(documents),
+            "workbook_tasks": len(all_tasks),
+            "flashcard_responses": len(flashcard_answers)
+        },
+        "complete_dossier": dossier,
+        "caseworker_notes_by_organization": notes_by_org,
+        "service_timeline": timeline[:100],  # Last 100 interactions
+        "flashcard_data": flashcard_answers,
+        "documents_metadata": documents,
+        "requesting_organization": current_user.organization,
+        "access_granted_by": "Unified BRICK Platform"
+    }
+
+@api_router.post("/agency/client/{client_id}/note")
+async def add_inter_agency_note(client_id: str, note: Dict[str, str], current_user: User = Depends(get_current_user)):
+    """Add note that ALL agencies can see"""
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only agency staff can add notes")
     
     caseworker_note = {
         "id": str(uuid.uuid4()),
         "client_id": client_id,
         "caseworker_id": current_user.id,
         "caseworker_name": current_user.full_name,
+        "organization": current_user.organization,
         "note": note.get("note"),
         "category": note.get("category", "general"),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.caseworker_notes.insert_one(caseworker_note)
-    return {"message": "Note added", "id": caseworker_note["id"]}
-
-@api_router.get("/caseworker/client/{client_id}/notes")
-async def get_caseworker_notes(client_id: str, current_user: User = Depends(get_current_user)):
-    if current_user.role not in ["caseworker", "agency_staff"]:
-        raise HTTPException(status_code=403, detail="Only caseworkers can view notes")
     
-    notes = await db.caseworker_notes.find(
-        {"client_id": client_id},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(1000)
+    # Also add to client's dossier with "agency" source
+    dossier_entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": client_id,
+        "category": note.get("category", "general"),
+        "title": f"Note from {current_user.organization}",
+        "content": note.get("note"),
+        "source": "agency",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.dossier.insert_one(dossier_entry)
     
-    return notes
+    return {"message": "Note added and visible to all agencies", "id": caseworker_note["id"]}
 
 # ==================== CASEWORKER ROUTES ====================
 
