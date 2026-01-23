@@ -57,7 +57,8 @@ class User(BaseModel):
     full_name: str
     phone: Optional[str] = None
     is_veteran: bool = False
-    role: str = "user"  # user or caseworker
+    role: str = "user"  # user, caseworker, agency_staff, cleanup_crew
+    organization: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class TokenResponse(BaseModel):
