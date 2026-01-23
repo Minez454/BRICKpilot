@@ -1,13 +1,75 @@
-import React, { useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, MapPin, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Users, MapPin, Plus, FileText, Download, Search, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "sonner";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 export default function AgencyDashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [clients, setClients] = useState([]);
+  const [hudReport, setHudReport] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientHistory, setClientHistory] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadUnifiedClients();
+    loadHUDReport();
+  }, []);
+
+  const loadUnifiedClients = async () => {
+    try {
+      const res = await axios.get(`${API}/agency/clients/unified`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClients(res.data.clients || []);
+    } catch (error) {
+      toast.error("Failed to load clients");
+    }
+  };
+
+  const loadHUDReport = async () => {
+    try {
+      const res = await axios.get(`${API}/caseworker/hud-report`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setHudReport(res.data);
+    } catch (error) {
+      console.error("Failed to load HUD report", error);
+    }
+  };
+
+  const viewClientHistory = async (clientId) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/agency/client/${clientId}/complete-history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClientHistory(res.data);
+      setSelectedClient(clientId);
+    } catch (error) {
+      toast.error("Failed to load client history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.client_info.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.client_info.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen yellow-brick-road">
@@ -20,7 +82,7 @@ export default function AgencyDashboard() {
                 <h1 className="text-4xl font-black mb-2" style={{textShadow: '3px 3px 6px rgba(0,0,0,0.3)'}}>
                   {user?.organization || 'Agency'} Portal
                 </h1>
-                <p className="text-emerald-100 text-lg">Welcome back, {user?.full_name?.split(' ')[0]}!</p>
+                <p className="text-emerald-100 text-lg">Unified Case Management System</p>
               </div>
               <Button onClick={logout} variant="outline" className="bg-white text-emerald-700 hover:bg-emerald-50 border-2 border-white font-bold">
                 Logout
@@ -29,68 +91,4 @@ export default function AgencyDashboard() {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="container mx-auto px-6 py-12">
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <Card className="border-4 border-emerald-400 shadow-2xl hover:scale-105 transition-transform glitter">
-              <CardHeader className="bg-gradient-to-br from-emerald-50 to-green-100">
-                <CardTitle className="flex items-center gap-3 text-emerald-700">
-                  <Calendar className="h-8 w-8" />
-                  Pop-Up Events
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-gray-700 mb-4">Post mobile clinics, food drives, and temporary services</p>
-                <Button className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold shadow-lg">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Create Event
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-4 border-amber-400 shadow-2xl hover:scale-105 transition-transform glitter">
-              <CardHeader className="bg-gradient-to-br from-amber-50 to-yellow-100">
-                <CardTitle className="flex items-center gap-3 text-amber-700">
-                  <MapPin className="h-8 w-8" />
-                  Resources
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-gray-700 mb-4">Manage your organization's service locations</p>
-                <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-white font-bold shadow-lg">
-                  Manage Resources
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-4 border-rose-400 shadow-2xl hover:scale-105 transition-transform glitter">
-              <CardHeader className="bg-gradient-to-br from-rose-50 to-pink-100">
-                <CardTitle className="flex items-center gap-3 text-rose-700">
-                  <Users className="h-8 w-8" />
-                  Clients
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-gray-700 mb-4">View clients using your services</p>
-                <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold shadow-lg">
-                  View Clients
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-4 border-purple-400 shadow-2xl glitter">
-            <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-              <CardTitle className="text-2xl">🎪 {user?.organization}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-8">
-              <p className="text-lg text-gray-700">
-                As an agency staff member, you can post pop-up events, manage resources on the map, and view clients who are using your services.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
+        {/* Content */}\n        <div className=\"container mx-auto px-6 py-8\">\n          <Tabs defaultValue=\"clients\" className=\"space-y-6\">\n            <TabsList className=\"grid w-full grid-cols-3 bg-white border-4 border-emerald-300\">\n              <TabsTrigger value=\"clients\" className=\"text-lg\">All Clients ({clients.length})</TabsTrigger>\n              <TabsTrigger value=\"hud\" className=\"text-lg\">HUD Reports</TabsTrigger>\n              <TabsTrigger value=\"events\" className=\"text-lg\">Events & Resources</TabsTrigger>\n            </TabsList>\n\n            {/* UNIFIED CLIENT LIST */}\n            <TabsContent value=\"clients\">\n              <Card className=\"border-4 border-emerald-400 shadow-2xl\">\n                <CardHeader className=\"bg-gradient-to-r from-emerald-50 to-green-100\">\n                  <div className=\"flex items-center justify-between\">\n                    <CardTitle className=\"text-2xl text-emerald-700\">Unified Client Database</CardTitle>\n                    <Badge className=\"bg-purple-500 text-white text-lg px-4 py-2\">\n                      Data Shared Across ALL Agencies\n                    </Badge>\n                  </div>\n                  <div className=\"mt-4\">\n                    <Input\n                      placeholder=\"Search clients by name or email...\"\n                      value={searchTerm}\n                      onChange={(e) => setSearchTerm(e.target.value)}\n                      className=\"border-2 border-emerald-300\"\n                      icon={<Search />}\n                    />\n                  </div>\n                </CardHeader>\n                <CardContent className=\"pt-6\">\n                  <div className=\"space-y-4\">\n                    {filteredClients.map((client, idx) => (\n                      <Card key={idx} className=\"border-2 border-gray-200 hover:border-emerald-400 transition-all\">\n                        <CardContent className=\"pt-4\">\n                          <div className=\"flex items-center justify-between\">\n                            <div className=\"flex-1\">\n                              <h3 className=\"text-lg font-bold text-gray-800\">\n                                {client.client_info.full_name}\n                                {client.client_info.is_veteran && (\n                                  <Badge className=\"ml-2 bg-blue-600 text-white\">Veteran</Badge>\n                                )}\n                              </h3>\n                              <p className=\"text-sm text-gray-600\">{client.client_info.email}</p>\n                              <div className=\"mt-2 grid grid-cols-4 gap-4 text-sm\">\n                                <div>\n                                  <span className=\"font-semibold\">Dossier Entries:</span> {client.engagement.dossier_entries}\n                                </div>\n                                <div>\n                                  <span className=\"font-semibold\">Documents:</span> {client.engagement.documents_uploaded}\n                                </div>\n                                <div>\n                                  <span className=\"font-semibold\">Agencies:</span> {client.inter_agency_data.agencies_served_by.length}\n                                </div>\n                                <div>\n                                  <span className=\"font-semibold\">Last Active:</span> {client.engagement.last_active ? new Date(client.engagement.last_active).toLocaleDateString() : 'Never'}\n                                </div>\n                              </div>\n                              {client.inter_agency_data.last_known_location !== \"Not recorded\" && (\n                                <div className=\"mt-2 p-2 bg-amber-50 border-l-4 border-amber-400 text-sm\">\n                                  <strong>Last Known Location:</strong> {client.inter_agency_data.last_known_location}\n                                </div>\n                              )}\n                            </div>\n                            <Dialog>\n                              <DialogTrigger asChild>\n                                <Button \n                                  onClick={() => viewClientHistory(client.client_info.id)}\n                                  className=\"bg-gradient-to-r from-emerald-500 to-green-600 text-white\"\n                                >\n                                  <Eye className=\"mr-2 h-4 w-4\" />\n                                  View Complete History\n                                </Button>\n                              </DialogTrigger>\n                              <DialogContent className=\"max-w-4xl max-h-[80vh] overflow-y-auto\">\n                                <DialogHeader>\n                                  <DialogTitle className=\"text-2xl\">Complete Client History - All Agencies</DialogTitle>\n                                </DialogHeader>\n                                {clientHistory && selectedClient === client.client_info.id ? (\n                                  <div className=\"space-y-6\">\n                                    <div className=\"grid grid-cols-3 gap-4\">\n                                      <Card className=\"border-2 border-emerald-300\">\n                                        <CardContent className=\"pt-4 text-center\">\n                                          <p className=\"text-3xl font-bold text-emerald-600\">{clientHistory.summary.total_dossier_entries}</p>\n                                          <p className=\"text-sm text-gray-600\">Dossier Entries</p>\n                                        </CardContent>\n                                      </Card>\n                                      <Card className=\"border-2 border-purple-300\">\n                                        <CardContent className=\"pt-4 text-center\">\n                                          <p className=\"text-3xl font-bold text-purple-600\">{clientHistory.summary.agencies_involved}</p>\n                                          <p className=\"text-sm text-gray-600\">Agencies Involved</p>\n                                        </CardContent>\n                                      </Card>\n                                      <Card className=\"border-2 border-blue-300\">\n                                        <CardContent className=\"pt-4 text-center\">\n                                          <p className=\"text-3xl font-bold text-blue-600\">{clientHistory.summary.total_caseworker_notes}</p>\n                                          <p className=\"text-sm text-gray-600\">Agency Notes</p>\n                                        </CardContent>\n                                      </Card>\n                                    </div>\n\n                                    <div>\n                                      <h3 className=\"text-xl font-bold mb-4\">Service Timeline (All Agencies)</h3>\n                                      <div className=\"space-y-3 max-h-96 overflow-y-auto\">\n                                        {clientHistory.service_timeline.slice(0, 20).map((event, i) => (\n                                          <div key={i} className=\"p-3 bg-gray-50 rounded-lg border-l-4 border-emerald-400\">\n                                            <div className=\"flex justify-between items-start\">\n                                              <div className=\"flex-1\">\n                                                <Badge className=\"mb-2\">{event.type}</Badge>\n                                                {event.organization && (\n                                                  <Badge className=\"ml-2 bg-purple-500\">{event.organization}</Badge>\n                                                )}\n                                                <p className=\"font-semibold mt-2\">{event.title || event.note}</p>\n                                                {event.content && <p className=\"text-sm text-gray-600 mt-1\">{event.content.substring(0, 150)}...</p>}\n                                              </div>\n                                              <span className=\"text-xs text-gray-500\">\n                                                {new Date(event.date).toLocaleDateString()}\n                                              </span>\n                                            </div>\n                                          </div>\n                                        ))}\n                                      </div>\n                                    </div>\n                                  </div>\n                                ) : loading ? (\n                                  <p>Loading complete history...</p>\n                                ) : null}\n                              </DialogContent>\n                            </Dialog>\n                          </div>\n                        </CardContent>\n                      </Card>\n                    ))}\n                  </div>\n                </CardContent>\n              </Card>\n            </TabsContent>\n\n            {/* HUD REPORTS */}\n            <TabsContent value=\"hud\">\n              <Card className=\"border-4 border-indigo-400 shadow-2xl\">\n                <CardHeader className=\"bg-gradient-to-r from-indigo-600 to-purple-600 text-white\">\n                  <div className=\"flex items-center justify-between\">\n                    <CardTitle className=\"text-2xl\">HUD Compliance & Grant Reports</CardTitle>\n                    <Button className=\"bg-white text-indigo-700 hover:bg-gray-100 font-bold\">\n                      <Download className=\"mr-2 h-5 w-5\" />\n                      Export Report\n                    </Button>\n                  </div>\n                </CardHeader>\n                <CardContent className=\"pt-8\">\n                  {hudReport && (\n                    <div className=\"space-y-8\">\n                      <div className=\"grid md:grid-cols-4 gap-6\">\n                        <Card className=\"border-4 border-emerald-300 glitter\">\n                          <CardContent className=\"pt-6 text-center\">\n                            <p className=\"text-5xl font-black text-emerald-600\">{hudReport.total_clients}</p>\n                            <p className=\"text-gray-700 font-semibold mt-2\">Total Clients</p>\n                          </CardContent>\n                        </Card>\n                        <Card className=\"border-4 border-blue-300 glitter\">\n                          <CardContent className=\"pt-6 text-center\">\n                            <p className=\"text-5xl font-black text-blue-600\">{hudReport.veteran_clients}</p>\n                            <p className=\"text-gray-700 font-semibold mt-2\">Veterans</p>\n                            <Badge className=\"mt-2 bg-blue-500\">{hudReport.veteran_percentage}%</Badge>\n                          </CardContent>\n                        </Card>\n                        <Card className=\"border-4 border-purple-300 glitter\">\n                          <CardContent className=\"pt-6 text-center\">\n                            <p className=\"text-5xl font-black text-purple-600\">{hudReport.active_users_30_days}</p>\n                            <p className=\"text-gray-700 font-semibold mt-2\">Active (30 days)</p>\n                            <Badge className=\"mt-2 bg-purple-500\">{hudReport.engagement_rate}%</Badge>\n                          </CardContent>\n                        </Card>\n                        <Card className=\"border-4 border-rose-300 glitter\">\n                          <CardContent className=\"pt-6 text-center\">\n                            <p className=\"text-5xl font-black text-rose-600\">{hudReport.users_with_case_files}</p>\n                            <p className=\"text-gray-700 font-semibold mt-2\">With Case Files</p>\n                            <Badge className=\"mt-2 bg-rose-500\">{hudReport.case_file_completion_rate}%</Badge>\n                          </CardContent>\n                        </Card>\n                      </div>\n\n                      <Card className=\"border-2 border-amber-300\">\n                        <CardHeader className=\"bg-amber-50\">\n                          <CardTitle>Service Categories</CardTitle>\n                        </CardHeader>\n                        <CardContent className=\"pt-4\">\n                          <div className=\"grid md:grid-cols-5 gap-4\">\n                            {Object.entries(hudReport.case_notes_by_category).map(([category, count]) => (\n                              <div key={category} className=\"text-center p-4 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-200\">\n                                <p className=\"text-3xl font-bold text-amber-600\">{count}</p>\n                                <p className=\"text-sm text-gray-700 capitalize font-semibold\">{category}</p>\n                              </div>\n                            ))}\n                          </div>\n                        </CardContent>\n                      </Card>\n\n                      <Card className=\"border-2 border-green-300\">\n                        <CardHeader className=\"bg-green-50\">\n                          <CardTitle>Report Details</CardTitle>\n                        </CardHeader>\n                        <CardContent className=\"pt-4\">\n                          <div className=\"grid md:grid-cols-2 gap-4 text-sm\">\n                            <div><strong>Organization:</strong> {hudReport.organization}</div>\n                            <div><strong>Generated By:</strong> {hudReport.generated_by}</div>\n                            <div><strong>Report Date:</strong> {new Date(hudReport.report_date).toLocaleString()}</div>\n                            <div><strong>Data Quality:</strong> {hudReport.data_quality?.data_completeness_percentage}% Complete</div>\n                          </div>\n                        </CardContent>\n                      </Card>\n                    </div>\n                  )}\n                </CardContent>\n              </Card>\n            </TabsContent>\n\n            {/* EVENTS & RESOURCES */}\n            <TabsContent value=\"events\">\n              <div className=\"grid md:grid-cols-3 gap-8\">\n                <Card className=\"border-4 border-emerald-400 shadow-2xl hover:scale-105 transition-transform glitter\">\n                  <CardHeader className=\"bg-gradient-to-br from-emerald-50 to-green-100\">\n                    <CardTitle className=\"flex items-center gap-3 text-emerald-700\">\n                      <Calendar className=\"h-8 w-8\" />\n                      Pop-Up Events\n                    </CardTitle>\n                  </CardHeader>\n                  <CardContent className=\"pt-6\">\n                    <p className=\"text-gray-700 mb-4\">Post mobile clinics, food drives, and temporary services</p>\n                    <Button className=\"w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold shadow-lg\">\n                      <Plus className=\"mr-2 h-5 w-5\" />\n                      Create Event\n                    </Button>\n                  </CardContent>\n                </Card>\n\n                <Card className=\"border-4 border-amber-400 shadow-2xl hover:scale-105 transition-transform glitter\">\n                  <CardHeader className=\"bg-gradient-to-br from-amber-50 to-yellow-100\">\n                    <CardTitle className=\"flex items-center gap-3 text-amber-700\">\n                      <MapPin className=\"h-8 w-8\" />\n                      Resources\n                    </CardTitle>\n                  </CardHeader>\n                  <CardContent className=\"pt-6\">\n                    <p className=\"text-gray-700 mb-4\">Manage your organization's service locations</p>\n                    <Button className=\"w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-white font-bold shadow-lg\">\n                      Manage Resources\n                    </Button>\n                  </CardContent>\n                </Card>\n\n                <Card className=\"border-4 border-rose-400 shadow-2xl hover:scale-105 transition-transform glitter\">\n                  <CardHeader className=\"bg-gradient-to-br from-rose-50 to-pink-100\">\n                    <CardTitle className=\"flex items-center gap-3 text-rose-700\">\n                      <FileText className=\"h-8 w-8\" />\n                      Forms Library\n                    </CardTitle>\n                  </CardHeader>\n                  <CardContent className=\"pt-6\">\n                    <p className=\"text-gray-700 mb-4\">Upload intake forms and documents for clients</p>\n                    <Button className=\"w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold shadow-lg\">\n                      Upload Forms\n                    </Button>\n                  </CardContent>\n                </Card>\n              </div>\n            </TabsContent>\n          </Tabs>\n        </div>\n      </div>\n    </div>\n  );\n}
