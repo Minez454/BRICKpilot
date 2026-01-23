@@ -142,7 +142,6 @@ code {
   [data-debug-wrapper="true"] {
     display: contents !important;
   }
-}
 
   [data-debug-wrapper="true"] > * {
     margin-left: inherit;
