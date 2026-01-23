@@ -21,6 +21,7 @@ export default function Dossier() {
   const { user, token, logout } = useContext(AuthContext);
   const [dossierItems, setDossierItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,6 +38,46 @@ export default function Dossier() {
       toast.error("Failed to load dossier");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+      await axios.post(
+        `${API}/dossier`,
+        {
+          category: formData.get("category"),
+          title: formData.get("title"),
+          content: formData.get("content"),
+          source: "manual"
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success("Item added to your dossier!");
+      setAddDialogOpen(false);
+      loadDossier();
+      e.target.reset();
+    } catch (error) {
+      toast.error("Failed to add item");
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    
+    try {
+      await axios.delete(`${API}/dossier/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success("Item deleted");
+      loadDossier();
+    } catch (error) {
+      toast.error("Failed to delete item");
     }
   };
 
