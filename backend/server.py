@@ -267,8 +267,174 @@ async def register(user_data: UserRegister):
     
     await db.users.insert_one(user_doc)
     
+    # Auto-generate initial flashcards for new user
+    await generate_initial_flashcards(user.id)
+    
     access_token = create_access_token(data={"sub": user.id})
     return TokenResponse(access_token=access_token, token_type="bearer", user=user)
+
+async def generate_initial_flashcards(user_id: str):
+    """Generate initial flashcards for new users"""
+    initial_flashcards = [
+        {
+            "category": "housing",
+            "question": "What is your current housing situation?",
+            "answer_options": [
+                "Living on the street/outdoors",
+                "Staying in an emergency shelter",
+                "Staying in my vehicle",
+                "Temporarily staying with friends/family",
+                "Transitional housing",
+                "Other"
+            ]
+        },
+        {
+            "category": "housing",
+            "question": "How long have you been without stable housing?",
+            "answer_options": [
+                "Less than 1 month",
+                "1-3 months",
+                "3-6 months",
+                "6-12 months",
+                "1-2 years",
+                "More than 2 years"
+            ]
+        },
+        {
+            "category": "legal",
+            "question": "Do you have a valid government-issued ID?",
+            "answer_options": [
+                "Yes, I have a current ID",
+                "I have an expired ID",
+                "No, but I know how to get one",
+                "No, and I need help getting one",
+                "I lost my ID and need a replacement"
+            ]
+        },
+        {
+            "category": "legal",
+            "question": "Do you have any pending legal matters?",
+            "answer_options": [
+                "No legal issues",
+                "Traffic tickets/fines",
+                "Court case pending",
+                "Warrant(s)",
+                "On probation/parole",
+                "Not sure/Need to check"
+            ]
+        },
+        {
+            "category": "health",
+            "question": "Do you have health insurance or medical coverage?",
+            "answer_options": [
+                "Yes, Medicaid",
+                "Yes, Medicare",
+                "Yes, private insurance",
+                "VA healthcare (veterans)",
+                "No coverage",
+                "Not sure"
+            ]
+        },
+        {
+            "category": "health",
+            "question": "Are you currently taking any medications regularly?",
+            "answer_options": [
+                "No medications",
+                "Yes, and I have access to them",
+                "Yes, but I'm running out",
+                "Yes, but I can't afford them",
+                "Yes, but I lost them",
+                "Not sure what I need"
+            ]
+        },
+        {
+            "category": "employment",
+            "question": "What is your current employment status?",
+            "answer_options": [
+                "Working full-time",
+                "Working part-time",
+                "Looking for work",
+                "Unable to work due to disability",
+                "Not currently looking",
+                "Retired"
+            ]
+        },
+        {
+            "category": "employment",
+            "question": "What type of work experience do you have?",
+            "answer_options": [
+                "Retail/Customer service",
+                "Food service/Hospitality",
+                "Construction/Manual labor",
+                "Healthcare",
+                "Office/Administrative",
+                "Other/Multiple fields"
+            ]
+        },
+        {
+            "category": "benefits",
+            "question": "Are you currently receiving any benefits?",
+            "answer_options": [
+                "SNAP/Food stamps",
+                "SSI (Supplemental Security Income)",
+                "SSDI (Disability)",
+                "Unemployment benefits",
+                "Veterans benefits",
+                "No benefits currently"
+            ]
+        },
+        {
+            "category": "benefits",
+            "question": "Have you applied for disability benefits?",
+            "answer_options": [
+                "No, not applicable to me",
+                "No, but I think I qualify",
+                "Yes, application pending",
+                "Yes, was approved",
+                "Yes, was denied",
+                "Not sure how to apply"
+            ]
+        },
+        {
+            "category": "housing",
+            "question": "What is your biggest barrier to housing?",
+            "answer_options": [
+                "Can't afford rent/deposit",
+                "Bad credit/rental history",
+                "Criminal background",
+                "No income source",
+                "Eviction on record",
+                "Multiple barriers"
+            ]
+        },
+        {
+            "category": "health",
+            "question": "Do you have any chronic health conditions?",
+            "answer_options": [
+                "No chronic conditions",
+                "Mental health condition",
+                "Physical disability",
+                "Substance use disorder",
+                "Multiple conditions",
+                "Prefer not to say"
+            ]
+        }
+    ]
+    
+    flashcard_docs = []
+    for fc_data in initial_flashcards:
+        flashcard = Flashcard(
+            user_id=user_id,
+            category=fc_data["category"],
+            question=fc_data["question"],
+            answer_options=fc_data["answer_options"]
+        )
+        doc = flashcard.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        flashcard_docs.append(doc)
+    
+    if flashcard_docs:
+        await db.flashcards.insert_many(flashcard_docs)
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
