@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Menu, BookOpen, Award, CheckCircle, Circle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Menu, BookOpen, Award, CheckCircle, Circle, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -16,6 +18,9 @@ const API = `${BACKEND_URL}/api`;
 export default function Workbook() {
   const { user, token, logout } = useContext(AuthContext);
   const [tasks, setTasks] = useState([]);
+  const [flashcards, setFlashcards] = useState([]);
+  const [currentFlashcard, setCurrentFlashcard] = useState(null);
+  const [flashcardAnswer, setFlashcardAnswer] = useState("");
   const [stats, setStats] = useState({ total_tasks: 0, completed_tasks: 0, total_points: 0, level: 1 });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -26,12 +31,18 @@ export default function Workbook() {
 
   const loadData = async () => {
     try {
-      const [tasksRes, statsRes] = await Promise.all([
+      const [tasksRes, statsRes, flashcardsRes] = await Promise.all([
         axios.get(`${API}/workbook/tasks`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/workbook/stats`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API}/workbook/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/flashcards`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setTasks(tasksRes.data);
       setStats(statsRes.data);
+      setFlashcards(flashcardsRes.data);
+      
+      // Set first unanswered flashcard
+      const unanswered = flashcardsRes.data.find(fc => !fc.user_answer);
+      if (unanswered) setCurrentFlashcard(unanswered);
     } catch (error) {
       toast.error("Failed to load workbook");
     } finally {
@@ -39,11 +50,11 @@ export default function Workbook() {
     }
   };
 
-  const completeTask = async (taskId, answer = null) => {
+  const completeTask = async (taskId) => {
     try {
       await axios.patch(
         `${API}/workbook/tasks/${taskId}/complete`,
-        { answer },
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Task completed! +10 points");
@@ -52,6 +63,31 @@ export default function Workbook() {
       toast.error("Failed to complete task");
     }
   };
+
+  const submitFlashcardAnswer = async () => {
+    if (!flashcardAnswer.trim() || !currentFlashcard) return;
+    
+    try {
+      await axios.post(
+        `${API}/flashcards/${currentFlashcard.id}/answer`,
+        { answer: flashcardAnswer },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success("Answer saved! BRICK is learning about you.");
+      setFlashcardAnswer("");
+      
+      // Move to next flashcard
+      const updatedCards = await axios.get(`${API}/flashcards`, { headers: { Authorization: `Bearer ${token}` } });
+      setFlashcards(updatedCards.data);
+      const nextUnanswered = updatedCards.data.find(fc => !fc.user_answer);
+      setCurrentFlashcard(nextUnanswered || null);
+    } catch (error) {
+      toast.error("Failed to save answer");
+    }
+  };
+
+  const answeredCount = flashcards.filter(fc => fc.user_answer).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50" data-testid="workbook-page">
@@ -80,7 +116,7 @@ export default function Workbook() {
           </Sheet>
           <div>
             <h1 className="text-xl font-bold text-gray-800" data-testid="page-title">My Workbook</h1>
-            <p className="text-xs text-gray-500">Personalized learning tasks</p>
+            <p className="text-xs text-gray-500">Personalized learning & flashcards</p>
           </div>
         </div>
       </div>
@@ -118,63 +154,142 @@ export default function Workbook() {
             </CardContent>
           </Card>
 
-          {/* Tasks */}
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Loading tasks...</p>
-            </div>
-          ) : tasks.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Tasks Yet</h3>
-              <p className="text-gray-600 mb-6">
-                Chat with BRICK AI to get personalized workbook tasks based on your needs!
-              </p>
-              <Button onClick={() => navigate("/brick")} className="btn-emerald">
-                Talk to BRICK
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {tasks.map(task => (
-                <Card key={task.id} className={`border-2 ${task.completed ? 'bg-green-50 border-green-200' : 'border-gray-200'}`} data-testid={`task-card-${task.id}`}>
+          <Tabs defaultValue="flashcards" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="flashcards" data-testid="tab-flashcards">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Flashcards ({answeredCount}/{flashcards.length})
+              </TabsTrigger>
+              <TabsTrigger value="tasks" data-testid="tab-tasks">Tasks ({stats.completed_tasks}/{stats.total_tasks})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="flashcards">
+              {loading ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">Loading flashcards...</p>
+                </div>
+              ) : currentFlashcard ? (
+                <Card className="border-2 border-blue-300">
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        {task.completed ? (
-                          <CheckCircle className="h-6 w-6 text-green-600 mt-1" />
-                        ) : (
-                          <Circle className="h-6 w-6 text-gray-400 mt-1" />
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CardTitle className="text-base">{task.title}</CardTitle>
-                            <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                            <Badge className="bg-blue-500 text-white text-xs">+{task.points} pts</Badge>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">{task.description}</p>
-                          {task.completed ? (
-                            <p className="text-xs text-green-600 font-medium">
-                              ✓ Completed on {new Date(task.completed_at).toLocaleDateString()}
-                            </p>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              onClick={() => completeTask(task.id)}
-                              className="btn-emerald"
-                              data-testid={`complete-task-btn-${task.id}`}
-                            >
-                              Mark as Complete
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Badge className="bg-blue-500 text-white">{currentFlashcard.category}</Badge>
+                      <p className="text-sm text-gray-600">{answeredCount + 1} of {flashcards.length}</p>
                     </div>
                   </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-blue-50 p-6 rounded-lg">
+                      <p className="text-lg font-medium text-gray-800">{currentFlashcard.question}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Your Answer:
+                      </label>
+                      <Textarea
+                        value={flashcardAnswer}
+                        onChange={(e) => setFlashcardAnswer(e.target.value)}
+                        placeholder="Share your answer here... This helps BRICK understand your situation better."
+                        rows={4}
+                        className="mb-3"
+                        data-testid="flashcard-answer-input"
+                      />
+                      <Button
+                        onClick={submitFlashcardAnswer}
+                        disabled={!flashcardAnswer.trim()}
+                        className="w-full btn-emerald"
+                        data-testid="submit-flashcard-btn"
+                      >
+                        Submit Answer
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">
+                      💡 Your answers help BRICK personalize your support and build your dossier
+                    </p>
+                  </CardContent>
                 </Card>
-              ))}
-            </div>
-          )}
+              ) : flashcards.length > 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">All Flashcards Completed!</h3>
+                  <p className="text-gray-600 mb-6">
+                    Great work! You've answered all {flashcards.length} flashcards. BRICK now has a better understanding of your situation.
+                  </p>
+                  <Button onClick={() => navigate("/dossier")} className="btn-emerald">
+                    View Your Dossier
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Flashcards Yet</h3>
+                  <p className="text-gray-600 mb-6">
+                    Chat with BRICK AI and flashcards will be generated based on your needs!
+                  </p>
+                  <Button onClick={() => navigate("/brick")} className="btn-emerald">
+                    Talk to BRICK
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="tasks">
+              {loading ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">Loading tasks...</p>
+                </div>
+              ) : tasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Tasks Yet</h3>
+                  <p className="text-gray-600 mb-6">
+                    Chat with BRICK AI to get personalized workbook tasks based on your needs!
+                  </p>
+                  <Button onClick={() => navigate("/brick")} className="btn-emerald">
+                    Talk to BRICK
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tasks.map(task => (
+                    <Card key={task.id} className={`border-2 ${task.completed ? 'bg-green-50 border-green-200' : 'border-gray-200'}`} data-testid={`task-card-${task.id}`}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            {task.completed ? (
+                              <CheckCircle className="h-6 w-6 text-green-600 mt-1" />
+                            ) : (
+                              <Circle className="h-6 w-6 text-gray-400 mt-1" />
+                            )}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <CardTitle className="text-base">{task.title}</CardTitle>
+                                <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                                <Badge className="bg-blue-500 text-white text-xs">+{task.points} pts</Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-3">{task.description}</p>
+                              {task.completed ? (
+                                <p className="text-xs text-green-600 font-medium">
+                                  ✓ Completed on {new Date(task.completed_at).toLocaleDateString()}
+                                </p>
+                              ) : (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => completeTask(task.id)}
+                                  className="btn-emerald"
+                                  data-testid={`complete-task-btn-${task.id}`}
+                                >
+                                  Mark as Complete
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
