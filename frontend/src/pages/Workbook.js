@@ -183,21 +183,25 @@ export default function Workbook() {
                       <p className="text-lg font-medium text-gray-800">{currentFlashcard.question}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">
-                        Your Answer:
+                      <label className="text-sm font-medium text-gray-700 mb-3 block">
+                        Select your answer:
                       </label>
-                      <Textarea
-                        value={flashcardAnswer}
-                        onChange={(e) => setFlashcardAnswer(e.target.value)}
-                        placeholder="Share your answer here... This helps BRICK understand your situation better."
-                        rows={4}
-                        className="mb-3"
-                        data-testid="flashcard-answer-input"
-                      />
+                      <RadioGroup value={flashcardAnswer} onValueChange={setFlashcardAnswer}>
+                        <div className="space-y-3">
+                          {currentFlashcard.answer_options && currentFlashcard.answer_options.map((option, idx) => (
+                            <div key={idx} className="flex items-center space-x-3 p-3 border-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors" data-testid={`option-${idx}`}>
+                              <RadioGroupItem value={option} id={`option-${idx}`} />
+                              <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer font-normal">
+                                {option}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </RadioGroup>
                       <Button
                         onClick={submitFlashcardAnswer}
-                        disabled={!flashcardAnswer.trim()}
-                        className="w-full btn-emerald"
+                        disabled={!flashcardAnswer}
+                        className="w-full btn-emerald mt-4"
                         data-testid="submit-flashcard-btn"
                       >
                         Submit Answer
