@@ -988,7 +988,26 @@ async def seed_initial_data():
     await db.resources.insert_many(resources)
     await db.legal_forms.insert_many(legal_forms)
     
-    return {"message": "Data seeded successfully", "resources": len(resources), "forms": len(legal_forms)}
+    # Create sample flashcards (will be assigned to users when they register)
+    sample_flashcards = [
+        {"category": "housing", "question": "What type of housing are you currently in? (shelter, outdoors, vehicle, temporary housing, etc.)"},
+        {"category": "housing", "question": "Have you been to a shelter in the past 30 days? If yes, which one?"},
+        {"category": "legal", "question": "Do you have any pending court cases or legal issues? Please describe briefly."},
+        {"category": "legal", "question": "Do you have a valid government-issued ID?"},
+        {"category": "health", "question": "Do you have any ongoing medical conditions that require treatment?"},
+        {"category": "health", "question": "Are you currently taking any medications? If yes, do you have access to them?"},
+        {"category": "employment", "question": "What type of work have you done in the past? What skills do you have?"},
+        {"category": "employment", "question": "Are you currently looking for employment? What barriers are you facing?"},
+        {"category": "benefits", "question": "Are you currently receiving any benefits? (SNAP, SSI, SSDI, Medicaid, etc.)"},
+        {"category": "benefits", "question": "Have you applied for disability benefits? What was the outcome?"}
+    ]
+    
+    return {
+        "message": "Data seeded successfully",
+        "resources": len(resources),
+        "forms": len(legal_forms),
+        "sample_flashcards": len(sample_flashcards)
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
