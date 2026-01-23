@@ -54,6 +54,23 @@ function App() {
     toast.success("Welcome to BRICK!");
   };
 
+  const getRoleHomePage = () => {
+    if (!user) return "/brick";
+    
+    switch(user.role) {
+      case "agency_staff":
+        return "/agency";
+      case "cleanup_crew":
+        return "/cleanup";
+      case "legal_aid":
+        return "/legal-portal";
+      case "caseworker":
+        return "/caseworker";
+      default:
+        return "/brick";
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
