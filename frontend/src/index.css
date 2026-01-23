@@ -130,14 +130,10 @@ code {
 }
 
 @layer base {
-  /* Hide inactive tab content */
-  [data-radix-tabs-content][data-state="inactive"] {
-    display: none;
-  }
-  
   [data-debug-wrapper="true"] {
     display: contents !important;
   }
+}
 
   [data-debug-wrapper="true"] > * {
     margin-left: inherit;
