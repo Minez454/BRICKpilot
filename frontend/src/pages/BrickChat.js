@@ -206,7 +206,9 @@ export default function BrickChat() {
                 data-testid={`message-${msg.role}-${idx}`}
               >
                 {msg.role === 'assistant' ? (
-                  <ReactMarkdown className="prose prose-sm max-w-none">{msg.content}</ReactMarkdown>
+                  <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
                 ) : (
                   <p>{msg.content}</p>
                 )}
