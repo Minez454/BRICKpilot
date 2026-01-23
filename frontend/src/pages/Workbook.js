@@ -67,7 +67,7 @@ export default function Workbook() {
   };
 
   const submitFlashcardAnswer = async () => {
-    if (!flashcardAnswer.trim() || !currentFlashcard) return;
+    if (!flashcardAnswer || !currentFlashcard) return;
     
     try {
       await axios.post(
