@@ -717,6 +717,122 @@ async def get_legal_forms():
             form['created_at'] = datetime.fromisoformat(form['created_at'])
     return forms
 
+@api_router.get("/caseworker/client/{client_id}/progress")
+async def get_client_progress(client_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only caseworkers can access this")
+    
+    # Get workbook stats
+    total_tasks = await db.workbook_tasks.count_documents({"user_id": client_id})
+    completed_tasks = await db.workbook_tasks.count_documents({"user_id": client_id, "completed": True})
+    
+    # Get dossier items
+    dossier = await db.dossier.find({"user_id": client_id}, {"_id": 0}).to_list(1000)
+    
+    # Get recent activity
+    recent_messages = await db.chat_messages.find(
+        {"user_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Get documents count
+    document_count = await db.vault.count_documents({"user_id": client_id})
+    
+    # Get flashcard stats
+    flashcard_count = await db.flashcards.count_documents({"user_id": client_id})
+    answered_flashcards = await db.flashcards.count_documents({"user_id": client_id, "user_answer": {"$ne": None}})
+    
+    return {
+        "total_tasks": total_tasks,
+        "completed_tasks": completed_tasks,
+        "completion_rate": (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0,
+        "dossier_items": len(dossier),
+        "dossier_by_category": _group_by_category(dossier),
+        "recent_activity": recent_messages,
+        "documents_stored": document_count,
+        "flashcards_total": flashcard_count,
+        "flashcards_answered": answered_flashcards
+    }
+
+def _group_by_category(items):
+    grouped = {}
+    for item in items:
+        cat = item.get('category', 'other')
+        if cat not in grouped:
+            grouped[cat] = 0
+        grouped[cat] += 1
+    return grouped
+
+@api_router.get("/caseworker/hud-report")
+async def generate_hud_report(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only caseworkers can access HUD reports")
+    
+    # Get all users
+    total_users = await db.users.count_documents({"role": "user"})
+    veterans = await db.users.count_documents({"role": "user", "is_veteran": True})
+    
+    # Get engagement metrics
+    active_users_30d = await db.chat_messages.distinct("user_id", {
+        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()}
+    })
+    
+    # Get service utilization
+    total_tasks_completed = await db.workbook_tasks.count_documents({"completed": True})
+    total_documents = await db.vault.count_documents({})
+    
+    # Get dossier statistics
+    all_dossiers = await db.dossier.find({}, {"_id": 0, "category": 1}).to_list(10000)
+    dossier_by_category = _group_by_category(all_dossiers)
+    
+    # Get resource access
+    resource_views = await db.resources.count_documents({})
+    
+    return {
+        "report_date": datetime.now(timezone.utc).isoformat(),
+        "total_clients": total_users,
+        "veteran_clients": veterans,
+        "veteran_percentage": (veterans / total_users * 100) if total_users > 0 else 0,
+        "active_users_30_days": len(active_users_30d),
+        "engagement_rate": (len(active_users_30d) / total_users * 100) if total_users > 0 else 0,
+        "workbook_tasks_completed": total_tasks_completed,
+        "documents_stored": total_documents,
+        "case_notes_by_category": dossier_by_category,
+        "resources_available": resource_views,
+        "generated_by": current_user.full_name,
+        "organization": current_user.organization or "BRICK Platform"
+    }
+
+@api_router.post("/caseworker/client/{client_id}/note")
+async def add_caseworker_note(client_id: str, note: Dict[str, str], current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only caseworkers can add notes")
+    
+    caseworker_note = {
+        "id": str(uuid.uuid4()),
+        "client_id": client_id,
+        "caseworker_id": current_user.id,
+        "caseworker_name": current_user.full_name,
+        "note": note.get("note"),
+        "category": note.get("category", "general"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.caseworker_notes.insert_one(caseworker_note)
+    return {"message": "Note added", "id": caseworker_note["id"]}
+
+@api_router.get("/caseworker/client/{client_id}/notes")
+async def get_caseworker_notes(client_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only caseworkers can view notes")
+    
+    notes = await db.caseworker_notes.find(
+        {"client_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    return notes
+
 # ==================== CASEWORKER ROUTES ====================
 
 @api_router.get("/caseworker/clients")
