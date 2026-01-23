@@ -66,6 +66,15 @@ code {
 }
 
 @layer components {
+  /* Tabs visibility control */
+  [role="tabpanel"][data-state="inactive"] {
+    display: none !important;
+  }
+  
+  [role="tabpanel"][data-state="active"] {
+    display: block !important;
+  }
+  
   .oz-gradient {
     background: linear-gradient(135deg, hsl(var(--emerald)) 0%, hsl(var(--yellow)) 100%);
   }
