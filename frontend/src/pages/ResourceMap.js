@@ -32,7 +32,7 @@ export default function ResourceMap() {
 
   useEffect(() => {
     loadResources();
-  }, [selectedCategory]);
+  }, [selectedCategory, token]);
 
   const loadResources = async () => {
     try {
