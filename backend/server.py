@@ -442,6 +442,169 @@ async def create_dossier_item(item: DossierItem, current_user: User = Depends(ge
     await db.dossier.insert_one(doc)
     return item
 
+@api_router.post("/dossier", response_model=DossierItem)
+async def create_dossier_item(item_data: DossierItemCreate, current_user: User = Depends(get_current_user)):
+    item = DossierItem(
+        user_id=current_user.id,
+        category=item_data.category,
+        title=item_data.title,
+        content=item_data.content,
+        source=item_data.source
+    )
+    doc = item.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.dossier.insert_one(doc)
+    return item
+
+@api_router.delete("/dossier/{item_id}")
+async def delete_dossier_item(item_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.dossier.delete_one({"id": item_id, "user_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted"}
+
+# ==================== FLASHCARDS ====================
+
+@api_router.get("/flashcards")
+async def get_flashcards(current_user: User = Depends(get_current_user)):
+    cards = await db.flashcards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
+    for card in cards:
+        if isinstance(card.get('created_at'), str):
+            card['created_at'] = datetime.fromisoformat(card['created_at'])
+        if card.get('answered_at') and isinstance(card['answered_at'], str):
+            card['answered_at'] = datetime.fromisoformat(card['answered_at'])
+    return cards
+
+@api_router.post("/flashcards/{card_id}/answer")
+async def answer_flashcard(card_id: str, answer_data: FlashcardAnswer, current_user: User = Depends(get_current_user)):
+    result = await db.flashcards.update_one(
+        {"id": card_id, "user_id": current_user.id},
+        {"$set": {
+            "user_answer": answer_data.answer,
+            "answered_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Flashcard not found")
+    
+    # Update dossier based on answer
+    card = await db.flashcards.find_one({"id": card_id}, {"_id": 0})
+    if card:
+        await analyze_flashcard_answer(current_user.id, card['question'], answer_data.answer, card['category'])
+    
+    return {"message": "Answer recorded"}
+
+async def analyze_flashcard_answer(user_id: str, question: str, answer: str, category: str):
+    """Analyze flashcard answer and update dossier"""
+    dossier_entry = DossierItem(
+        user_id=user_id,
+        category=category,
+        title=f"Flashcard: {question[:50]}",
+        content=f"Q: {question}\nA: {answer}",
+        source="flashcard"
+    )
+    doc = dossier_entry.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.dossier.insert_one(doc)
+
+# ==================== POP-UP EVENTS ====================
+
+@api_router.get("/events/popup")
+async def get_popup_events():
+    now = datetime.now(timezone.utc)
+    events = await db.popup_events.find(
+        {"end_time": {"$gte": now.isoformat()}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for event in events:
+        if isinstance(event.get('created_at'), str):
+            event['created_at'] = datetime.fromisoformat(event['created_at'])
+        if isinstance(event.get('start_time'), str):
+            event['start_time'] = datetime.fromisoformat(event['start_time'])
+        if isinstance(event.get('end_time'), str):
+            event['end_time'] = datetime.fromisoformat(event['end_time'])
+    
+    return events
+
+@api_router.post("/events/popup", response_model=PopUpEvent)
+async def create_popup_event(event_data: PopUpEventCreate, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only agency staff can create events")
+    
+    event = PopUpEvent(
+        title=event_data.title,
+        description=event_data.description,
+        event_type=event_data.event_type,
+        organization=event_data.organization,
+        location=event_data.location,
+        coordinates=event_data.coordinates,
+        start_time=datetime.fromisoformat(event_data.start_time),
+        end_time=datetime.fromisoformat(event_data.end_time),
+        services=event_data.services,
+        contact=event_data.contact,
+        created_by=current_user.id
+    )
+    
+    doc = event.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['start_time'] = doc['start_time'].isoformat()
+    doc['end_time'] = doc['end_time'].isoformat()
+    
+    await db.popup_events.insert_one(doc)
+    return event
+
+@api_router.delete("/events/popup/{event_id}")
+async def delete_popup_event(event_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only agency staff can delete events")
+    
+    result = await db.popup_events.delete_one({"id": event_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return {"message": "Event deleted"}
+
+# ==================== CLEANUP SWEEPS ====================
+
+@api_router.get("/sweeps")
+async def get_cleanup_sweeps():
+    now = datetime.now(timezone.utc)
+    sweeps = await db.cleanup_sweeps.find(
+        {"scheduled_date": {"$gte": now.isoformat()}},
+        {"_id": 0}
+    ).sort("scheduled_date", 1).to_list(1000)
+    
+    for sweep in sweeps:
+        if isinstance(sweep.get('created_at'), str):
+            sweep['created_at'] = datetime.fromisoformat(sweep['created_at'])
+        if isinstance(sweep.get('scheduled_date'), str):
+            sweep['scheduled_date'] = datetime.fromisoformat(sweep['scheduled_date'])
+    
+    return sweeps
+
+@api_router.post("/sweeps", response_model=CleanupSweep)
+async def create_cleanup_sweep(sweep_data: CleanupSweepCreate, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["cleanup_crew", "caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only cleanup crews can post sweeps")
+    
+    sweep = CleanupSweep(
+        location=sweep_data.location,
+        coordinates=sweep_data.coordinates,
+        scheduled_date=datetime.fromisoformat(sweep_data.scheduled_date),
+        area_description=sweep_data.area_description,
+        advance_notice_days=sweep_data.advance_notice_days,
+        posted_by=current_user.id,
+        contact_info=sweep_data.contact_info,
+        notes=sweep_data.notes
+    )
+    
+    doc = sweep.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['scheduled_date'] = doc['scheduled_date'].isoformat()
+    
+    await db.cleanup_sweeps.insert_one(doc)
+    return sweep
+
 # ==================== WORKBOOK ====================
 
 @api_router.get("/workbook/tasks", response_model=List[WorkbookTask])
