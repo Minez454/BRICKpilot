@@ -128,6 +128,75 @@ class DocumentUpload(BaseModel):
     file_name: str
     file_data: str
 
+class PopUpEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    event_type: str  # mobile_clinic, food_drive, vaccine, job_fair, etc
+    organization: str
+    location: str
+    coordinates: Dict[str, float]  # lat, lng
+    start_time: datetime
+    end_time: datetime
+    services: List[str]
+    contact: Optional[str] = None
+    created_by: str  # user_id of agency staff
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PopUpEventCreate(BaseModel):
+    title: str
+    description: str
+    event_type: str
+    organization: str
+    location: str
+    coordinates: Dict[str, float]
+    start_time: str
+    end_time: str
+    services: List[str]
+    contact: Optional[str] = None
+
+class CleanupSweep(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    location: str
+    coordinates: Dict[str, float]
+    scheduled_date: datetime
+    area_description: str
+    advance_notice_days: int
+    posted_by: str  # user_id
+    contact_info: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CleanupSweepCreate(BaseModel):
+    location: str
+    coordinates: Dict[str, float]
+    scheduled_date: str
+    area_description: str
+    advance_notice_days: int
+    contact_info: str
+    notes: Optional[str] = None
+
+class Flashcard(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    category: str
+    question: str
+    user_answer: Optional[str] = None
+    answered_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FlashcardAnswer(BaseModel):
+    answer: str
+
+class DossierItemCreate(BaseModel):
+    category: str
+    title: str
+    content: str
+    source: str = "manual"
+
 class LegalForm(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
