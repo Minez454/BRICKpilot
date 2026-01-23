@@ -1,34 +1,22 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.App {
+  min-height: 100vh;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.message-user {
+  background: linear-gradient(135deg, hsl(134, 70%, 48%) 0%, hsl(134, 70%, 58%) 100%);
+  color: white;
+  margin-left: auto;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.message-assistant {
+  background: white;
+  border: 2px solid hsl(45, 20%, 88%);
+  color: hsl(180, 20%, 12%);
+  margin-right: auto;
 }
 
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
 }

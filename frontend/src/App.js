@@ -1,11 +1,10 @@
-import React, { useState, useEffect, createContext } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
-// Pages
 import LandingPage from "@/pages/LandingPage";
 import BrickChat from "@/pages/BrickChat";
 import ResourceMap from "@/pages/ResourceMap";
@@ -18,8 +17,7 @@ import CaseworkerDashboard from "@/pages/CaseworkerDashboard";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Auth Context
-export const AuthContext = createContext();
+export const AuthContext = React.createContext();
 
 function App() {
   const [user, setUser] = useState(null);
