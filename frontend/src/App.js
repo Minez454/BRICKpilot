@@ -94,13 +94,43 @@ function App() {
             <Route
               path="/"
               element={
-                !token ? <LandingPage /> : <Navigate to="/brick" replace />
+                !token ? <LandingPage /> : <Navigate to={getRoleHomePage()} replace />
               }
             />
             <Route
               path="/brick"
               element={
                 token ? <BrickChat /> : <Navigate to="/" replace />
+              }
+            />
+            <Route
+              path="/agency"
+              element={
+                token && user?.role === "agency_staff" ? (
+                  <AgencyDashboard />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/cleanup"
+              element={
+                token && user?.role === "cleanup_crew" ? (
+                  <CleanupDashboard />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/legal-portal"
+              element={
+                token && user?.role === "legal_aid" ? (
+                  <LegalAidPortal />
+                ) : (
+                  <Navigate to="/" replace />
+                )
               }
             />
             <Route
@@ -112,7 +142,7 @@ function App() {
             <Route
               path="/vault"
               element={
-                token ? <Vault /> : <Navigate to="/" replace />
+                token && user?.role === "user" ? <Vault /> : <Navigate to="/" replace />
               }
             />
             <Route
@@ -124,13 +154,13 @@ function App() {
             <Route
               path="/workbook"
               element={
-                token ? <Workbook /> : <Navigate to="/" replace />
+                token && user?.role === "user" ? <Workbook /> : <Navigate to="/" replace />
               }
             />
             <Route
               path="/dossier"
               element={
-                token ? <Dossier /> : <Navigate to="/" replace />
+                token && user?.role === "user" ? <Dossier /> : <Navigate to="/" replace />
               }
             />
             <Route
