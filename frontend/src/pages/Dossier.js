@@ -226,10 +226,23 @@ export default function Dossier() {
                         <Card key={item.id} className={`border-2 ${colorClass}`} data-testid={`dossier-item-${item.id}`}>
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between">
-                              <CardTitle className="text-base">{item.title}</CardTitle>
-                              <Badge variant="outline" className="text-xs">
-                                {item.source}
-                              </Badge>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <CardTitle className="text-base">{item.title}</CardTitle>
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.source}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`delete-item-${item.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </CardHeader>
                           <CardContent>
