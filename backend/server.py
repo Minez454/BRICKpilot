@@ -184,6 +184,7 @@ class Flashcard(BaseModel):
     user_id: str
     category: str
     question: str
+    answer_options: List[str]  # Multiple choice options
     user_answer: Optional[str] = None
     answered_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
