@@ -133,6 +133,47 @@ export default function Dossier() {
             <p className="text-xs text-gray-500">Your unified case history</p>
           </div>
         </div>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="btn-ruby" data-testid="add-dossier-btn">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Entry
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add to Your Dossier</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddItem} className="space-y-4">
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select name="category" required>
+                  <SelectTrigger data-testid="dossier-category-select">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="housing">Housing</SelectItem>
+                    <SelectItem value="legal">Legal</SelectItem>
+                    <SelectItem value="health">Health</SelectItem>
+                    <SelectItem value="employment">Employment</SelectItem>
+                    <SelectItem value="benefits">Benefits</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" name="title" required placeholder="Brief summary" data-testid="dossier-title-input" />
+              </div>
+              <div>
+                <Label htmlFor="content">Details</Label>
+                <Textarea id="content" name="content" required rows={4} placeholder="Add details about this situation..." data-testid="dossier-content-input" />
+              </div>
+              <Button type="submit" className="w-full btn-emerald" data-testid="submit-dossier-btn">
+                Add to Dossier
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Content */}
