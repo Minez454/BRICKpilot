@@ -173,6 +173,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 # ==================== AUTH ROUTES ====================
 
+@api_router.get("/")
+async def root():
+    return {"message": "BRICK API - Your AI Caseworker", "status": "online"}
+
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserRegister):
     existing = await db.users.find_one({"email": user_data.email})
