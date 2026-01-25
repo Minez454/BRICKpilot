@@ -97,6 +97,11 @@ export default function Directory() {
     return colors[color] || colors.emerald;
   };
 
+  // Helper to get color for an organization based on category
+  const getOrgColor = (org) => {
+    return getCategoryColor(org.category);
+  };
+
   const handleSendMessage = async () => {
     if (!messageText.trim()) {
       toast.error("Please enter a message");
