@@ -347,6 +347,14 @@ export default function LandingPage() {
                     >
                       {loading ? "Opening the gates..." : "Enter the Emerald City"}
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => setForgotOpen(true)}
+                      className="w-full text-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline mt-2"
+                      data-testid="forgot-password-link"
+                    >
+                      Forgot your password?
+                    </button>
                   </form>
                 </TabsContent>
                 
