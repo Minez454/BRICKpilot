@@ -15,6 +15,7 @@ from jose import JWTError, jwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import base64
 import asyncio
+from seed_resources import ALL_RESOURCES
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
