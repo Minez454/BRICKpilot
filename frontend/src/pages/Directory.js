@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../App";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Menu, Search, MapPin, Phone, Clock, Mail, Send, Building2, 
-  Heart, Home, Utensils, Briefcase, Scale, Stethoscope, Users,
-  ChevronRight, Star, MessageSquare, FileText, ExternalLink
+  Menu, Search, MapPin, Phone, Clock, Send, Building2, 
+  Home, Utensils, Scale, Stethoscope,
+  ChevronRight, MessageSquare, ExternalLink
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
