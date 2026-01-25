@@ -69,13 +69,13 @@ export default function BrickChat() {
   };
 
   return (
-    <div className="h-screen flex flex-col" style={{background: 'linear-gradient(135deg, #f0fdf4 0%, #fef3c7 100%)'}} data-testid="brick-chat-page">
+    <div className="h-screen flex flex-col oz-gradient" data-testid="brick-chat-page">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-md border-b-2 border-emerald-200 px-4 py-3 flex items-center justify-between shadow-lg">
+      <div className="oz-header px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-emerald-700" data-testid="menu-button">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" data-testid="menu-button">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
@@ -155,18 +155,18 @@ export default function BrickChat() {
             </SheetContent>
           </Sheet>
           <div>
-            <h1 className="text-2xl font-bold text-emerald-700" data-testid="header-title">BRICK</h1>
-            <p className="text-xs text-emerald-600">Your AI Caseworker</p>
+            <h1 className="text-2xl font-bold text-white gold-text" data-testid="header-title" style={{fontFamily: 'Cinzel, serif'}}>BRICK</h1>
+            <p className="text-xs text-emerald-100">Your AI Caseworker</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-sm font-medium text-gray-700" data-testid="user-name">{user?.full_name}</p>
-          <p className="text-xs text-gray-500">{user?.email}</p>
+          <p className="text-sm font-medium text-white" data-testid="user-name">{user?.full_name}</p>
+          <p className="text-xs text-emerald-200">{user?.email}</p>
         </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" style={{background: 'linear-gradient(135deg, rgba(240,253,244,0.95) 0%, rgba(254,243,199,0.95) 100%)'}}>
         <ScrollArea className="h-full px-4 py-6" ref={scrollRef} data-testid="chat-messages-area">
           {messages.length === 0 && (
             <div className="max-w-3xl mx-auto text-center py-12">
@@ -226,7 +226,7 @@ export default function BrickChat() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t-2 border-emerald-200 bg-white/90 backdrop-blur-md p-4">
+      <div className="border-t-2 border-emerald-300 bg-white/95 backdrop-blur-lg p-4 shadow-lg">
         <div className="max-w-4xl mx-auto flex gap-3">
           <Input
             value={input}
