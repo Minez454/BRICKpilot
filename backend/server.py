@@ -1037,6 +1037,332 @@ async def get_directory_messages(current_user: User = Depends(get_current_user))
     
     return messages
 
+# ==================== HUD HMIS API ENDPOINTS ====================
+
+# Client Profile (Universal Data Elements)
+@api_router.get("/hmis/client-profile")
+async def get_client_profile(current_user: User = Depends(get_current_user)):
+    """Get HUD-compliant client profile for current user"""
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not profile:
+        # Create empty profile
+        profile = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "first_name": current_user.full_name.split()[0] if current_user.full_name else None,
+            "last_name": current_user.full_name.split()[-1] if current_user.full_name and len(current_user.full_name.split()) > 1 else None,
+            "name_data_quality": 99,
+            "ssn_data_quality": 99,
+            "dob_data_quality": 99,
+            "race": [],
+            "ethnicity": 99,
+            "gender": [],
+            "sex_at_birth": 99,
+            "veteran_status": 1 if current_user.is_veteran else 0,
+            "email": current_user.email,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.hmis_client_profiles.insert_one(profile)
+    return profile
+
+@api_router.post("/hmis/client-profile")
+async def update_client_profile(data: dict, current_user: User = Depends(get_current_user)):
+    """Update HUD-compliant client profile"""
+    data["user_id"] = current_user.id
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    existing = await db.hmis_client_profiles.find_one({"user_id": current_user.id})
+    if existing:
+        await db.hmis_client_profiles.update_one(
+            {"user_id": current_user.id},
+            {"$set": data}
+        )
+    else:
+        data["id"] = str(uuid.uuid4())
+        data["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.hmis_client_profiles.insert_one(data)
+    
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    return profile
+
+# Enrollments (Project Entry/Exit)
+@api_router.get("/hmis/enrollments")
+async def get_enrollments(current_user: User = Depends(get_current_user)):
+    """Get all enrollments for current user"""
+    enrollments = await db.hmis_enrollments.find({"user_id": current_user.id}, {"_id": 0}).to_list(100)
+    return enrollments
+
+@api_router.post("/hmis/enrollments")
+async def create_enrollment(data: dict, current_user: User = Depends(get_current_user)):
+    """Create new enrollment (project entry)"""
+    # Get or create client profile
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id})
+    if not profile:
+        profile = {"id": str(uuid.uuid4()), "user_id": current_user.id}
+        await db.hmis_client_profiles.insert_one(profile)
+    
+    enrollment = {
+        "id": str(uuid.uuid4()),
+        "client_id": profile["id"],
+        "user_id": current_user.id,
+        "project_id": "BRICK_LV",
+        "project_start_date": data.get("project_start_date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "relationship_to_hoh": data.get("relationship_to_hoh", 1),
+        "prior_living_situation": data.get("prior_living_situation", 99),
+        "length_of_stay": data.get("length_of_stay", 99),
+        "times_homeless_past_3_years": data.get("times_homeless_past_3_years", 99),
+        "months_homeless_past_3_years": data.get("months_homeless_past_3_years", 99),
+        "status": "active",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Determine living situation category
+    homeless_codes = [1, 2, 16, 18]
+    institutional_codes = [4, 5, 6, 7, 15, 24, 29]
+    
+    pls = enrollment["prior_living_situation"]
+    if pls in homeless_codes:
+        enrollment["prior_living_situation_category"] = "homeless"
+    elif pls in institutional_codes:
+        enrollment["prior_living_situation_category"] = "institutional"
+    else:
+        enrollment["prior_living_situation_category"] = "transitional_permanent"
+    
+    await db.hmis_enrollments.insert_one(enrollment)
+    return {"enrollment_id": enrollment["id"], **{k:v for k,v in enrollment.items() if k != "_id"}}
+
+@api_router.post("/hmis/enrollments/{enrollment_id}/exit")
+async def exit_enrollment(enrollment_id: str, data: dict, current_user: User = Depends(get_current_user)):
+    """Record project exit"""
+    result = await db.hmis_enrollments.update_one(
+        {"id": enrollment_id, "user_id": current_user.id},
+        {"$set": {
+            "project_exit_date": data.get("exit_date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+            "destination": data.get("destination", 99),
+            "status": "exited",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    return {"message": "Exit recorded successfully"}
+
+# Coordinated Entry Assessment (VI-SPDAT)
+@api_router.post("/hmis/assessment")
+async def create_assessment(data: dict, current_user: User = Depends(get_current_user)):
+    """Create coordinated entry assessment with VI-SPDAT scoring"""
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id})
+    enrollment = await db.hmis_enrollments.find_one({"user_id": current_user.id, "status": "active"})
+    
+    if not profile:
+        raise HTTPException(status_code=400, detail="Client profile required")
+    
+    # Calculate VI-SPDAT score from responses
+    responses = data.get("responses", {})
+    score = 0
+    
+    # Scoring logic (simplified VI-SPDAT)
+    if responses.get("homeless_more_than_year"): score += 1
+    if responses.get("homeless_4_or_more_times"): score += 1
+    if responses.get("er_visits_3_plus"): score += 1
+    if responses.get("hospitalizations"): score += 1
+    if responses.get("attacked_since_homeless"): score += 1
+    if responses.get("threatened_harm"): score += 1
+    if responses.get("legal_issues"): score += 1
+    if responses.get("forced_sex"): score += 1
+    if responses.get("risky_activity_for_money"): score += 1
+    if responses.get("chronic_health_condition"): score += 1
+    if responses.get("hiv_aids"): score += 1
+    if responses.get("mental_health_condition"): score += 1
+    if responses.get("substance_use"): score += 1
+    if responses.get("tri_morbidity"): score += 2  # Physical + Mental + Substance
+    if responses.get("medications_not_taken"): score += 1
+    if responses.get("abuse_trauma"): score += 1
+    
+    # Determine housing recommendation
+    if score >= 10:
+        recommendation = "Permanent Supportive Housing (PSH)"
+        prioritization = 1
+    elif score >= 4:
+        recommendation = "Rapid Re-Housing (RRH)"
+        prioritization = 1
+    else:
+        recommendation = "Prevention/Diversion"
+        prioritization = 2
+    
+    assessment = {
+        "id": str(uuid.uuid4()),
+        "client_id": profile["id"],
+        "user_id": current_user.id,
+        "enrollment_id": enrollment["id"] if enrollment else None,
+        "assessment_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "assessment_type": data.get("assessment_type", 3),
+        "assessment_level": 2,
+        "vulnerability_score": score,
+        "housing_recommendation": recommendation,
+        "prioritization_status": prioritization,
+        "assessment_responses": responses,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.hmis_assessments.insert_one(assessment)
+    
+    # If high priority, notify caseworkers
+    if score >= 8:
+        caseworkers = await db.users.find({"role": {"$in": ["caseworker", "agency_staff"]}}, {"_id": 0, "id": 1}).to_list(100)
+        for cw in caseworkers:
+            notification = {
+                "id": str(uuid.uuid4()),
+                "user_id": cw["id"],
+                "notification_type": "high_priority_client",
+                "title": "🚨 High Priority Client",
+                "message": f"A client has scored {score} on the VI-SPDAT assessment and needs immediate housing assistance. Recommendation: {recommendation}",
+                "priority": "urgent",
+                "read": False,
+                "metadata": {"assessment_id": assessment["id"], "score": score},
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notification)
+    
+    return {
+        "assessment_id": assessment["id"],
+        "vulnerability_score": score,
+        "housing_recommendation": recommendation,
+        "prioritization_status": "Placed on list" if prioritization == 1 else "Not on list"
+    }
+
+@api_router.get("/hmis/assessment")
+async def get_assessments(current_user: User = Depends(get_current_user)):
+    """Get assessments for current user"""
+    assessments = await db.hmis_assessments.find({"user_id": current_user.id}, {"_id": 0}).to_list(10)
+    return assessments
+
+# Services
+@api_router.post("/hmis/services")
+async def record_service(data: dict, current_user: User = Depends(get_current_user)):
+    """Record a service provided to client"""
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id})
+    enrollment = await db.hmis_enrollments.find_one({"user_id": current_user.id, "status": "active"})
+    
+    service = {
+        "id": str(uuid.uuid4()),
+        "client_id": profile["id"] if profile else current_user.id,
+        "enrollment_id": enrollment["id"] if enrollment else None,
+        "service_date": data.get("service_date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "service_type": data.get("service_type", 6),
+        "service_description": data.get("description"),
+        "provider_organization": data.get("provider"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.hmis_services.insert_one(service)
+    return {"service_id": service["id"]}
+
+# Bed Nights (Shelter tracking)
+@api_router.post("/hmis/bed-night")
+async def record_bed_night(data: dict, current_user: User = Depends(get_current_user)):
+    """Record a bed night (shelter stay)"""
+    profile = await db.hmis_client_profiles.find_one({"user_id": current_user.id})
+    enrollment = await db.hmis_enrollments.find_one({"user_id": current_user.id, "status": "active"})
+    
+    bed_night = {
+        "id": str(uuid.uuid4()),
+        "client_id": profile["id"] if profile else current_user.id,
+        "enrollment_id": enrollment["id"] if enrollment else None,
+        "bed_night_date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "location_id": data.get("location_id"),
+        "auto_recorded": data.get("auto_recorded", False),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.hmis_bed_nights.insert_one(bed_night)
+    return {"bed_night_id": bed_night["id"]}
+
+# ==================== HUD CSV EXPORT (CRITICAL FOR COMPLIANCE) ====================
+
+@api_router.get("/hmis/export/csv")
+async def export_hud_csv(current_user: User = Depends(get_current_user)):
+    """Generate HUD-compliant CSV export for agency staff"""
+    if current_user.role not in ["agency_staff", "caseworker"]:
+        raise HTTPException(status_code=403, detail="Only agency staff can export data")
+    
+    import csv
+    import io
+    import zipfile
+    
+    # Get all data
+    clients = await db.hmis_client_profiles.find({}, {"_id": 0}).to_list(10000)
+    enrollments = await db.hmis_enrollments.find({}, {"_id": 0}).to_list(10000)
+    services = await db.hmis_services.find({}, {"_id": 0}).to_list(10000)
+    exits = [e for e in enrollments if e.get("status") == "exited"]
+    
+    # Create CSV files in memory
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Client.csv
+        client_csv = io.StringIO()
+        writer = csv.writer(client_csv)
+        writer.writerow(['PersonalID', 'FirstName', 'LastName', 'NameDataQuality', 'SSN', 'SSNDataQuality', 
+                        'DOB', 'DOBDataQuality', 'Race', 'Ethnicity', 'Gender', 'VeteranStatus', 'DateCreated'])
+        for c in clients:
+            writer.writerow([
+                c.get('id'), c.get('first_name'), c.get('last_name'), c.get('name_data_quality'),
+                '***-**-****', c.get('ssn_data_quality'), c.get('dob'), c.get('dob_data_quality'),
+                '|'.join(map(str, c.get('race', []))), c.get('ethnicity'), 
+                '|'.join(map(str, c.get('gender', []))), c.get('veteran_status'), c.get('created_at')
+            ])
+        zip_file.writestr('Client.csv', client_csv.getvalue())
+        
+        # Enrollment.csv
+        enrollment_csv = io.StringIO()
+        writer = csv.writer(enrollment_csv)
+        writer.writerow(['EnrollmentID', 'PersonalID', 'ProjectID', 'EntryDate', 'HouseholdID', 
+                        'RelationshipToHoH', 'LivingSituation', 'LengthOfStay', 'DateCreated'])
+        for e in enrollments:
+            writer.writerow([
+                e.get('id'), e.get('client_id'), e.get('project_id'), e.get('project_start_date'),
+                e.get('id'), e.get('relationship_to_hoh'), e.get('prior_living_situation'),
+                e.get('length_of_stay'), e.get('created_at')
+            ])
+        zip_file.writestr('Enrollment.csv', enrollment_csv.getvalue())
+        
+        # Exit.csv
+        exit_csv = io.StringIO()
+        writer = csv.writer(exit_csv)
+        writer.writerow(['ExitID', 'EnrollmentID', 'PersonalID', 'ExitDate', 'Destination', 'DateCreated'])
+        for e in exits:
+            writer.writerow([
+                str(uuid.uuid4()), e.get('id'), e.get('client_id'), 
+                e.get('project_exit_date'), e.get('destination'), e.get('updated_at')
+            ])
+        zip_file.writestr('Exit.csv', exit_csv.getvalue())
+        
+        # Services.csv
+        services_csv = io.StringIO()
+        writer = csv.writer(services_csv)
+        writer.writerow(['ServicesID', 'EnrollmentID', 'PersonalID', 'DateProvided', 
+                        'RecordType', 'TypeProvided', 'DateCreated'])
+        for s in services:
+            writer.writerow([
+                s.get('id'), s.get('enrollment_id'), s.get('client_id'),
+                s.get('service_date'), 200, s.get('service_type'), s.get('created_at')
+            ])
+        zip_file.writestr('Services.csv', services_csv.getvalue())
+    
+    # Return as base64 for download
+    zip_buffer.seek(0)
+    zip_base64 = base64.b64encode(zip_buffer.read()).decode('utf-8')
+    
+    return {
+        "filename": f"HUD_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+        "data": zip_base64,
+        "format": "base64",
+        "files_included": ["Client.csv", "Enrollment.csv", "Exit.csv", "Services.csv"]
+    }
+
 # ==================== CLEANUP SWEEPS ====================
 
 # Cleanup-prefixed routes for frontend compatibility
