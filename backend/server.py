@@ -1674,14 +1674,358 @@ async def get_workbook_stats(current_user: User = Depends(get_current_user)):
     ]).to_list(1)
     
     total_points = points[0]["total_points"] if points else 0
+    
+    # Also count workbook progress
+    workbooks = await db.workbooks.find({"user_id": current_user.id}, {"_id": 0}).to_list(100)
+    completed_workbooks = len([w for w in workbooks if w.get("completed_at")])
+    
+    # Calculate level based on total points + workbook completions
+    total_points += completed_workbooks * 50  # 50 bonus points per completed workbook
     level = (total_points // 100) + 1
     
     return {
         "total_tasks": total,
         "completed_tasks": completed,
         "total_points": total_points,
-        "level": level
+        "level": level,
+        "total_workbooks": len(workbooks),
+        "completed_workbooks": completed_workbooks
     }
+
+# ==================== AI-POWERED WORKBOOKS ====================
+
+@api_router.get("/workbooks")
+async def get_workbooks(current_user: User = Depends(get_current_user)):
+    """Get all workbooks for current user"""
+    workbooks = await db.workbooks.find({"user_id": current_user.id}, {"_id": 0}).to_list(100)
+    return workbooks
+
+@api_router.get("/workbooks/{workbook_id}")
+async def get_workbook(workbook_id: str, current_user: User = Depends(get_current_user)):
+    """Get a specific workbook with full content"""
+    workbook = await db.workbooks.find_one({"id": workbook_id, "user_id": current_user.id}, {"_id": 0})
+    if not workbook:
+        raise HTTPException(status_code=404, detail="Workbook not found")
+    return workbook
+
+@api_router.post("/workbooks/generate")
+async def generate_personalized_workbooks(current_user: User = Depends(get_current_user)):
+    """
+    AI analyzes user's flashcard answers, dossier, and conversation history
+    to generate personalized workbooks tailored to their specific needs
+    """
+    # Gather user data for AI analysis
+    flashcards = await db.flashcards.find({"user_id": current_user.id, "user_answer": {"$ne": None}}, {"_id": 0}).to_list(100)
+    dossier = await db.dossier.find({"user_id": current_user.id}, {"_id": 0}).to_list(100)
+    recent_chats = await db.chat_messages.find(
+        {"user_id": current_user.id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Get existing workbooks to avoid duplicates
+    existing = await db.workbooks.find({"user_id": current_user.id}, {"_id": 0, "title": 1, "category": 1}).to_list(100)
+    existing_titles = [w.get("title", "").lower() for w in existing]
+    
+    # Build context for AI
+    user_context = f"""
+User Profile:
+- Name: {current_user.full_name}
+- Veteran: {current_user.is_veteran}
+
+Flashcard Answers:
+{chr(10).join([f"Q: {fc.get('question', '')} A: {fc.get('user_answer', '')}" for fc in flashcards[:10]])}
+
+Dossier Notes:
+{chr(10).join([f"- {d.get('category', '')}: {d.get('content', '')[:200]}" for d in dossier[:5]])}
+
+Recent Conversation Topics:
+{chr(10).join([msg.get('content', '')[:100] for msg in recent_chats if msg.get('role') == 'user'][:5])}
+
+Already has workbooks on: {', '.join(existing_titles) if existing_titles else 'None yet'}
+"""
+
+    # Use AI to recommend workbooks
+    try:
+        chat = LlmChat(
+            api_key=os.environ.get('EMERGENT_LLM_KEY', ''),
+            system_message="""You are BRICK's Workbook Generator. Based on the user's profile, flashcard answers, and conversation history, recommend 3-5 personalized workbooks they should complete.
+
+Consider their specific barriers, knowledge gaps, and goals. Prioritize practical life skills they may be missing.
+
+Available workbook topics by category:
+- life_skills: cooking_basics, meal_planning, grocery_shopping, food_storage, laundry_basics, cleaning_home, time_management, public_transit
+- financial: budgeting_101, bank_account, building_credit, avoiding_debt, saving_money, understanding_taxes, benefits_maximizing  
+- safety_awareness: spotting_scams, recognize_narcissist, gaslighting, manipulation_tactics, healthy_boundaries, domestic_violence, online_safety, street_safety
+- housing: tenant_rights, apartment_hunting, rental_applications, being_good_tenant, utility_setup, roommate_success
+- employment: resume_writing, job_searching, interview_skills, workplace_success, handling_conflict, workers_rights
+- health_wellness: mental_health_basics, stress_management, substance_awareness, sleep_hygiene, nutrition_basics, navigating_healthcare, medication_management
+- legal_navigation: court_basics, dealing_with_warrants, record_sealing, child_support, id_replacement
+- communication: effective_communication, conflict_resolution, asking_for_help, professional_communication
+
+Return a JSON array with your recommendations. Each item should have:
+- topic_id: the exact topic ID from above
+- category: the category
+- priority: 1-5 (1 is highest priority)
+- reason: A personalized 1-2 sentence explanation of why this user specifically needs this workbook
+
+Example format:
+[{"topic_id": "budgeting_101", "category": "financial", "priority": 1, "reason": "Based on your answers, you mentioned struggling with money management. This will help you create a plan."}]
+
+Only return the JSON array, no other text."""
+        ).with_model("openai", "gpt-5.2")
+        
+        response = await chat.send_message(UserMessage(text=f"Analyze this user and recommend workbooks:\n\n{user_context}"))
+        
+        # Parse AI recommendations
+        import json
+        # Clean the response - remove markdown code blocks if present
+        clean_response = response.strip()
+        if clean_response.startswith("```"):
+            clean_response = clean_response.split("```")[1]
+            if clean_response.startswith("json"):
+                clean_response = clean_response[4:]
+        clean_response = clean_response.strip()
+        
+        recommendations = json.loads(clean_response)
+        
+    except Exception as e:
+        logging.error(f"AI workbook recommendation error: {e}")
+        # Fallback: recommend based on flashcard categories
+        recommendations = [
+            {"topic_id": "budgeting_101", "category": "financial", "priority": 1, "reason": "Essential money management skills for stability."},
+            {"topic_id": "spotting_scams", "category": "safety_awareness", "priority": 2, "reason": "Protect yourself from common scams targeting vulnerable individuals."},
+            {"topic_id": "cooking_basics", "category": "life_skills", "priority": 3, "reason": "Save money and eat healthier by learning to cook."},
+        ]
+    
+    # Generate actual workbook content for each recommendation
+    generated_workbooks = []
+    
+    for rec in recommendations[:5]:  # Limit to 5
+        topic_id = rec.get("topic_id")
+        category = rec.get("category")
+        
+        # Find topic details
+        topic_info = None
+        if category in WORKBOOK_TOPICS:
+            for t in WORKBOOK_TOPICS[category]:
+                if t["id"] == topic_id:
+                    topic_info = t
+                    break
+        
+        if not topic_info:
+            continue
+            
+        # Skip if already exists
+        if topic_info["title"].lower() in existing_titles:
+            continue
+        
+        # Generate detailed workbook content with AI
+        workbook_content = await generate_workbook_content(
+            topic_id=topic_id,
+            title=topic_info["title"],
+            description=topic_info["desc"],
+            category=category,
+            user_context=user_context,
+            reason=rec.get("reason", "")
+        )
+        
+        if workbook_content:
+            workbook = {
+                "id": str(uuid.uuid4()),
+                "user_id": current_user.id,
+                "title": topic_info["title"],
+                "category": category,
+                "description": topic_info["desc"],
+                "why_recommended": rec.get("reason", "Recommended based on your profile"),
+                "difficulty": rec.get("priority", 2),
+                "estimated_time": workbook_content.get("estimated_time", "20-30 minutes"),
+                "lessons": workbook_content.get("lessons", []),
+                "exercises": workbook_content.get("exercises", []),
+                "action_items": workbook_content.get("action_items", []),
+                "resources": workbook_content.get("resources", []),
+                "progress": 0,
+                "completed_lessons": [],
+                "completed_exercises": [],
+                "completed_actions": [],
+                "started_at": None,
+                "completed_at": None,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.workbooks.insert_one(workbook)
+            generated_workbooks.append({
+                "id": workbook["id"],
+                "title": workbook["title"],
+                "category": workbook["category"],
+                "why_recommended": workbook["why_recommended"]
+            })
+    
+    return {
+        "message": f"Generated {len(generated_workbooks)} personalized workbooks",
+        "workbooks": generated_workbooks
+    }
+
+async def generate_workbook_content(topic_id: str, title: str, description: str, category: str, user_context: str, reason: str) -> Dict:
+    """Generate detailed workbook content using AI"""
+    try:
+        chat = LlmChat(
+            api_key=os.environ.get('EMERGENT_LLM_KEY', ''),
+            system_message=f"""You are BRICK's Educational Content Creator. Create a comprehensive, practical workbook on "{title}".
+
+This workbook is for someone experiencing homelessness in Las Vegas. The content should be:
+- Practical and actionable
+- Trauma-informed and non-judgmental  
+- Written at an accessible reading level
+- Focused on real-world application
+- Encouraging and empowering
+
+The user's specific situation: {reason}
+
+Create the workbook with this exact JSON structure:
+{{
+    "estimated_time": "X-Y minutes",
+    "lessons": [
+        {{
+            "id": "lesson_1",
+            "title": "Lesson title",
+            "content": "2-3 paragraphs of educational content",
+            "key_points": ["Point 1", "Point 2", "Point 3"]
+        }}
+    ],
+    "exercises": [
+        {{
+            "id": "exercise_1", 
+            "question": "Question text",
+            "type": "multiple_choice",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correct_answer": "Option A",
+            "explanation": "Why this is correct and what it teaches"
+        }}
+    ],
+    "action_items": [
+        "Specific real-world task 1",
+        "Specific real-world task 2"
+    ],
+    "resources": [
+        {{"title": "Resource name", "url": "https://...", "description": "Brief description"}}
+    ]
+}}
+
+Include:
+- 3-4 lessons with meaningful content
+- 4-5 quiz exercises (mix of multiple choice and true/false)
+- 3-4 real-world action items they can do this week
+- 2-3 helpful resources (use real URLs when possible)
+
+Return ONLY the JSON, no other text."""
+        ).with_model("openai", "gpt-5.2")
+        
+        response = await chat.send_message(UserMessage(text=f"Create a workbook on: {title}\nDescription: {description}\nCategory: {category}"))
+        
+        # Parse response
+        import json
+        clean_response = response.strip()
+        if clean_response.startswith("```"):
+            clean_response = clean_response.split("```")[1]
+            if clean_response.startswith("json"):
+                clean_response = clean_response[4:]
+        clean_response = clean_response.strip()
+        
+        return json.loads(clean_response)
+        
+    except Exception as e:
+        logging.error(f"Workbook content generation error: {e}")
+        # Return basic structure
+        return {
+            "estimated_time": "15-20 minutes",
+            "lessons": [
+                {
+                    "id": "lesson_1",
+                    "title": f"Introduction to {title}",
+                    "content": f"Welcome to this workbook on {description}. This content will help you build important skills for your journey to stability.",
+                    "key_points": ["Understanding the basics", "Why this matters", "How to apply it"]
+                }
+            ],
+            "exercises": [
+                {
+                    "id": "exercise_1",
+                    "question": f"Why is {title.lower()} important?",
+                    "type": "multiple_choice",
+                    "options": ["It helps you save money", "It protects you from harm", "It builds independence", "All of the above"],
+                    "correct_answer": "All of the above",
+                    "explanation": "These skills contribute to your overall stability and independence."
+                }
+            ],
+            "action_items": [
+                f"Research more about {title.lower()}",
+                "Talk to BRICK AI about your specific questions",
+                "Practice what you learned this week"
+            ],
+            "resources": []
+        }
+
+@api_router.patch("/workbooks/{workbook_id}/progress")
+async def update_workbook_progress(workbook_id: str, data: dict, current_user: User = Depends(get_current_user)):
+    """Update progress on a workbook (complete lessons, exercises, action items)"""
+    workbook = await db.workbooks.find_one({"id": workbook_id, "user_id": current_user.id})
+    if not workbook:
+        raise HTTPException(status_code=404, detail="Workbook not found")
+    
+    update_fields = {}
+    
+    # Start tracking if not started
+    if not workbook.get("started_at"):
+        update_fields["started_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Update completed items
+    if "completed_lesson" in data:
+        completed = workbook.get("completed_lessons", [])
+        if data["completed_lesson"] not in completed:
+            completed.append(data["completed_lesson"])
+        update_fields["completed_lessons"] = completed
+    
+    if "completed_exercise" in data:
+        completed = workbook.get("completed_exercises", [])
+        if data["completed_exercise"] not in completed:
+            completed.append(data["completed_exercise"])
+        update_fields["completed_exercises"] = completed
+    
+    if "completed_action" in data:
+        completed = workbook.get("completed_actions", [])
+        if data["completed_action"] not in completed:
+            completed.append(data["completed_action"])
+        update_fields["completed_actions"] = completed
+    
+    # Calculate progress percentage
+    total_items = (
+        len(workbook.get("lessons", [])) + 
+        len(workbook.get("exercises", [])) + 
+        len(workbook.get("action_items", []))
+    )
+    completed_items = (
+        len(update_fields.get("completed_lessons", workbook.get("completed_lessons", []))) +
+        len(update_fields.get("completed_exercises", workbook.get("completed_exercises", []))) +
+        len(update_fields.get("completed_actions", workbook.get("completed_actions", [])))
+    )
+    
+    progress = int((completed_items / total_items) * 100) if total_items > 0 else 0
+    update_fields["progress"] = progress
+    
+    # Mark as completed if 100%
+    if progress >= 100 and not workbook.get("completed_at"):
+        update_fields["completed_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.workbooks.update_one(
+        {"id": workbook_id, "user_id": current_user.id},
+        {"$set": update_fields}
+    )
+    
+    return {"progress": progress, "completed": progress >= 100}
+
+@api_router.get("/workbooks/topics")
+async def get_available_topics():
+    """Get all available workbook topics organized by category"""
+    return WORKBOOK_TOPICS
 
 # ==================== RESOURCES ====================
 
