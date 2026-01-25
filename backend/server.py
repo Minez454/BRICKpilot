@@ -733,6 +733,61 @@ async def delete_popup_event(event_id: str, current_user: User = Depends(get_cur
 
 # ==================== CLEANUP SWEEPS ====================
 
+# Cleanup-prefixed routes for frontend compatibility
+@api_router.get("/cleanup/sweeps")
+async def get_cleanup_sweeps_prefixed(current_user: User = Depends(get_current_user)):
+    """Get sweeps - aliased for frontend"""
+    sweeps = await db.cleanup_sweeps.find({}, {"_id": 0}).sort("scheduled_date", -1).to_list(1000)
+    return sweeps
+
+@api_router.post("/cleanup/sweeps")
+async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = Depends(get_current_user)):
+    """Create sweep - aliased for frontend"""
+    if current_user.role not in ["cleanup_crew", "caseworker", "agency_staff"]:
+        raise HTTPException(status_code=403, detail="Only cleanup crews can post sweeps")
+    
+    sweep = {
+        "id": str(uuid.uuid4()),
+        "location": sweep_data.get("location"),
+        "date": sweep_data.get("date"),
+        "time": sweep_data.get("time"),
+        "description": sweep_data.get("description"),
+        "posted_by": current_user.id,
+        "organization": current_user.organization,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.cleanup_sweeps.insert_one(sweep)
+    return sweep
+
+# ==================== LEGAL CASES ====================
+
+@api_router.get("/legal/cases")
+async def get_legal_cases(current_user: User = Depends(get_current_user)):
+    """Get legal cases for legal aid professionals"""
+    if current_user.role != "legal_aid":
+        raise HTTPException(status_code=403, detail="Only legal aid professionals can access cases")
+    
+    cases = await db.legal_cases.find({"status": {"$ne": "closed"}}, {"_id": 0}).to_list(1000)
+    return cases
+
+@api_router.post("/legal/cases")
+async def create_legal_case(case_data: dict, current_user: User = Depends(get_current_user)):
+    """Create or request legal assistance"""
+    legal_case = {
+        "id": str(uuid.uuid4()),
+        "client_id": current_user.id,
+        "client_name": current_user.full_name,
+        "case_type": case_data.get("case_type", "general"),
+        "description": case_data.get("description"),
+        "status": "pending",
+        "assigned_to": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.legal_cases.insert_one(legal_case)
+    return legal_case
+
 @api_router.get("/sweeps")
 async def get_cleanup_sweeps():
     now = datetime.now(timezone.utc)
