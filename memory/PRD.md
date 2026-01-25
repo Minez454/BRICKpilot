@@ -90,7 +90,6 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 
 ### P1 - High Priority
 - [ ] Pop-up Event creation UI for agencies (map integration)
-- [ ] Sweep notifications to affected users
 - [ ] Legal consultation request flow
 
 ### P2 - Medium Priority
