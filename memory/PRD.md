@@ -12,35 +12,107 @@ BRICK is now a **federally compliant Homeless Management Information System** th
 
 ---
 
-## HUD HMIS Features (NEW)
+## COMPREHENSIVE APP SUMMARY
 
-### Database Schema (FY2026 Compliant)
-- **Client Profile** - All Universal Data Elements (3.01-3.07)
-- **Enrollments** - Project entry/exit with 3.917 Prior Living Situation
-- **Coordinated Entry Assessment** - VI-SPDAT scoring with auto-prioritization
-- **Services** - Service tracking (4.12)
-- **Bed Nights** - Shelter stay tracking (4.14)
+### FOR INDIVIDUAL USERS (Unhoused Individuals)
 
-### Key HUD Fields Captured
-- Name Data Quality (3.01)
-- SSN Data Quality (3.02)
-- DOB Data Quality (3.03)
-- Race - Multi-select including MENA (3.04)
-- Ethnicity (3.05)
-- Gender Identity - FY2026 compliant multi-select (3.06)
-- Sex Assigned at Birth - NEW required field (3.06a)
-- Veteran Status (3.07)
-- Prior Living Situation with logic tree (3.917)
-- Destination on exit (3.12)
+#### 🤖 BRICK AI Chatbot
+- **Trauma-responsive AI** that listens empathetically and guides users through complex systems
+- Learns your story and auto-saves relevant information to your Dossier
+- Provides personalized resource recommendations for Las Vegas area
+- Helps navigate housing, legal, health, employment, and benefits systems
+- Never gives direct legal advice but connects users to proper resources
 
-### HUD CSV Export
-Agencies can now click **"Generate HUD CSV"** to download a ZIP with:
+#### 📍 Resource Directory (NEW - 25 Real Organizations!)
+- **Live database of verified Las Vegas service providers** including:
+  - **Coordinated Entry Points** (6): The Courtyard, Catholic Charities, Family Promise, HELP of SN, NPHY, VA CRRC
+  - **Emergency Shelters** (6): The Courtyard, Las Vegas Rescue Mission, The Shade Tree, SafeNest, Shannon West, Salvation Army
+  - **Food Resources** (5): St. Vincent's, Rescue Mission meals, City Mission, Just One Project, Three Square
+  - **Medical Services** (5): Nevada Health Centers, Mobile Medical Van, First Person Care, SNHD Sexual Health, Mojave Mental Health
+  - **Legal Aid** (3): Nevada Homeless Alliance, Legal Aid Center, Silver State Fair Housing
+- Filter by category, search by name or service
+- Contact organizations directly via phone or in-app messaging
+- View hours, addresses, services, and target populations
+
+#### 🗺️ Resource Map
+- Interactive Leaflet map showing Las Vegas homeless services
+- Color-coded markers by service type (shelter, food, medical, legal)
+- Quick access to directions and contact info
+
+#### 🔐 The Vault (Document Storage)
+- Secure, encrypted storage for vital documents
+- Upload DD-214 (veterans), IDs, birth certificates, medical records
+- Share documents with caseworkers when needed
+- Access your documents from anywhere
+
+#### 📋 My Dossier (Personal History)
+- Organized record of your housing history, legal issues, health needs
+- Auto-populated from BRICK AI conversations
+- Color-coded by source (AI conversation, manual entry, flashcards)
+- Used for Quick-Apply feature (coming soon)
+
+#### 📚 Workbook (Self-Assessment)
+- 12 auto-generated flashcards covering housing, legal, health, employment, benefits
+- Points and level progression to track your journey
+- Answers help BRICK AI understand your needs better
+
+#### 🔔 Notification System
+- **Real-time sweep alerts** from cleanup crews
+- Never miss important information about encampment relocations
+- Bell icon with unread count badge
+
+---
+
+### FOR AGENCIES (Caseworkers, Shelters, Service Providers)
+
+#### 🏢 Agency Dashboards (11 Organization Themes)
+Each organization gets a custom-branded dashboard with their colors and logo:
+- **Shine-A-Light Las Vegas** - Mobile outreach
+- **Recover Las Vegas** - Recovery services
+- **Catholic Charities** - Social services
+- **Salvation Army** - Shelter and rehabilitation
+- **NPHY** - Homeless youth services
+- **Veterans Village** - Veteran-specific services
+- **Shannon West Center** - Youth shelter
+- **TRAC-B** - Harm reduction
+- **City of Las Vegas** - Government coordination
+- **Clark County** - County services
+- **HELP of Southern Nevada** - Comprehensive services
+
+#### 📊 Dashboard Features
+- Client overview with recent activity
+- Search and filter clients
+- View individual client progress
+- Access unified client database
+
+#### 📈 HUD HMIS Compliance (FY2026 Standards)
+Full federal compliance for Homeless Management Information System:
+- **Universal Data Elements** (3.01-3.07): Name, SSN, DOB, Race, Ethnicity, Gender, Veteran Status
+- **FY2026 Updates**: Sex Assigned at Birth (3.06a), expanded Gender options
+- **Prior Living Situation Logic Tree** (3.917): Homeless, Institutional, Transitional categories
+- **Project Enrollment/Exit Tracking**
+- **Coordinated Entry Assessments** with VI-SPDAT scoring
+- **Service Recording** (4.12)
+- **Bed Night Tracking** (4.14)
+
+#### 📤 HUD CSV Export
+One-click export of compliant data files:
 - Client.csv
 - Enrollment.csv
 - Exit.csv
 - Services.csv
 
-This ZIP can be imported directly into Clark County's HMIS system!
+These files can be imported directly into Clark County's HMIS system.
+
+#### 🧹 Cleanup Crew Dashboard
+- Post upcoming sweep schedules
+- Auto-notify ALL registered users in the affected area
+- View scheduled and past sweeps
+
+#### ⚖️ Legal Aid Portal
+- View client cases needing legal assistance
+- Access legal resources library
+- Schedule workshops and clinics
 
 ---
 
@@ -72,93 +144,35 @@ This ZIP can be imported directly into Clark County's HMIS system!
 
 ---
 
-## Features Implemented
-
-### User Registration & Auth
-- ✅ "Get Started Free" button on landing page
-- ✅ Login / Register tabs
-- ✅ **Forgot Password** with token-based reset
-- ✅ Multi-role authentication (6 roles)
-- ✅ Auto-redirects based on role
-
-### BRICK AI Chat
-- ✅ Trauma-responsive AI caseworker
-- ✅ Markdown response formatting
-- ✅ Auto-saves relevant info to Dossier
-- ✅ Session management
-
-### Notification System
-- ✅ **Notification Bell** with unread count badge
-- ✅ Sweep alerts from cleanup crews
-- ✅ Real-time polling (30 seconds)
-- ✅ Mark as read / Mark all read
-
-### Document Vault
-- ✅ Upload vital documents (ID, DD-214, etc.)
-- ✅ View/download documents
-- ✅ Document type categorization
-
-### Resource Map
-- ✅ Las Vegas services with Leaflet map
-- ✅ Category filters
-- ✅ 6 pre-loaded resources
-
-### Workbook
-- ✅ Interactive flashcards
-- ✅ 12 auto-generated for new users
-- ✅ Points and level progression
-
-### Dossier
-- ✅ Form-based personal history
-- ✅ Color-coded by source
-- ✅ Auto-updates from AI chat
-
-### Agency Dashboards
-- ✅ **11 organization-specific themes**
-- ✅ Unified client database
-- ✅ HUD compliance reports
-- ✅ Dashboard overview cards
-- ✅ Client search/filter
-
-### Cleanup Crew Dashboard
-- ✅ Post sweep schedules
-- ✅ Auto-notify all users
-- ✅ View scheduled sweeps
-
-### Legal Aid Portal
-- ✅ Client cases tab
-- ✅ Legal resources library
-- ✅ Workshop scheduling
-
----
-
 ## Technical Architecture
 
 ```
 /app/
 ├── backend/
 │   ├── server.py              # FastAPI with all endpoints
+│   ├── seed_resources.py      # Las Vegas resource data
+│   ├── hud_standards.py       # HMIS Pydantic models
 │   ├── requirements.txt
 │   └── .env
 ├── frontend/
-│   ├── src/
-│   │   ├── App.js
-│   │   ├── index.css          # Wizard of Oz theme
-│   │   ├── components/
-│   │   │   └── NotificationBell.js
-│   │   └── pages/
-│   │       ├── LandingPage.js     # With Forgot Password
-│   │       ├── BrickChat.js
-│   │       ├── AgencyDashboard.js # 11 org themes
-│   │       ├── CleanupDashboard.js
-│   │       ├── LegalAidPortal.js
-│   │       ├── Workbook.js
-│   │       ├── Dossier.js
-│   │       ├── ResourceMap.js
-│   │       └── Vault.js
-│   └── public/index.html
-└── test_reports/
-    └── iteration_3.json       # 100% pass rate
+│   └── src/
+│       ├── App.js
+│       ├── index.css          # Wizard of Oz theme
+│       ├── components/
+│       │   └── NotificationBell.js
+│       └── pages/
+│           ├── LandingPage.js
+│           ├── BrickChat.js
+│           ├── Directory.js       # NEW: Real data from DB
+│           ├── AgencyDashboard.js
+│           ├── CleanupDashboard.js
+│           ├── LegalAidPortal.js
+│           ├── HUDIntake.js
+│           ├── Workbook.js
+│           ├── Dossier.js
+│           ├── ResourceMap.js
+│           └── Vault.js
+└── DEPLOY.md               # Self-hosting guide
 ```
 
 ---
@@ -167,18 +181,20 @@ This ZIP can be imported directly into Clark County's HMIS system!
 
 ### P0 - Next Priority
 - [ ] Quick-Apply - Auto-fill housing applications
+- [ ] VI-SPDAT Assessment via AI chat
 
 ### P1 - High Priority
+- [ ] Organization messaging (frontend flow completion)
 - [ ] Pop-up Events on map
-- [ ] Legal consultation requests
 - [ ] Print Dossier to PDF
 
 ### P2 - Medium Priority
+- [ ] Live Bed Night Count with geofencing
+- [ ] Auto-exit logic (AI texts inactive users)
 - [ ] Inter-agency messaging
-- [ ] SMS notifications
-- [ ] Email integration
+- [ ] SMS/Email notifications
 
 ---
 
 *Last Updated: January 25, 2026*
-*Status: PILOT-READY with Forgot Password & 11 Organization Accounts*
+*Status: PILOT-READY with Resource Directory (25 real Las Vegas organizations)*
