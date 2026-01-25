@@ -428,6 +428,103 @@ export default function LandingPage() {
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={(open) => {
+        setForgotOpen(open);
+        if (!open) {
+          setForgotStep(1);
+          setResetToken("");
+          setResetEmail("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
+                <KeyRound className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl" style={{fontFamily: 'Cinzel, serif'}}>
+                  {forgotStep === 1 ? "Forgot Password?" : "Reset Password"}
+                </DialogTitle>
+                <DialogDescription>
+                  {forgotStep === 1 
+                    ? "Enter your email to receive a reset token" 
+                    : "Enter the token and your new password"}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {forgotStep === 1 ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <Label htmlFor="forgot_email" className="text-gray-700 font-medium">Email Address</Label>
+                <Input 
+                  id="forgot_email"
+                  name="forgot_email" 
+                  type="email" 
+                  required 
+                  placeholder="Enter your email"
+                  className="mt-1 border-2 border-gray-200 focus:border-amber-500 rounded-xl"
+                  data-testid="forgot-email-input"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full btn-gold" 
+                disabled={loading}
+                data-testid="forgot-submit-btn"
+              >
+                {loading ? "Sending..." : "Get Reset Token"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="p-3 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                <p className="text-sm text-amber-800 font-medium">Your reset token:</p>
+                <p className="text-2xl font-bold text-amber-600 tracking-wider mt-1" data-testid="reset-token-display">
+                  {resetToken}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">Token expires in 1 hour</p>
+              </div>
+              <div>
+                <Label htmlFor="reset_token" className="text-gray-700 font-medium">Enter Token</Label>
+                <Input 
+                  id="reset_token"
+                  name="reset_token" 
+                  required 
+                  placeholder="Enter the token above"
+                  className="mt-1 border-2 border-gray-200 focus:border-amber-500 rounded-xl uppercase"
+                  data-testid="reset-token-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_password" className="text-gray-700 font-medium">New Password</Label>
+                <Input 
+                  id="new_password"
+                  name="new_password" 
+                  type="password"
+                  required 
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  className="mt-1 border-2 border-gray-200 focus:border-amber-500 rounded-xl"
+                  data-testid="new-password-input"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full btn-emerald" 
+                disabled={loading}
+                data-testid="reset-submit-btn"
+              >
+                {loading ? "Resetting..." : "Reset Password"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
