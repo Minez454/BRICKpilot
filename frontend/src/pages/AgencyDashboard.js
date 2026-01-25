@@ -146,6 +146,38 @@ export default function AgencyDashboard() {
     }
   };
 
+  const exportHUDCsv = async () => {
+    try {
+      toast.info("Generating HUD CSV export...");
+      const res = await axios.get(`${API}/hmis/export/csv`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Convert base64 to blob and download
+      const byteCharacters = atob(res.data.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/zip' });
+      
+      // Download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${res.data.filename} with ${res.data.files_included.length} CSV files!`);
+    } catch (error) {
+      toast.error("Failed to export HUD data");
+    }
+  };
+
   const filteredClients = clients.filter(c => 
     c.client_info.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.client_info.email?.toLowerCase().includes(searchTerm.toLowerCase())
