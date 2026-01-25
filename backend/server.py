@@ -1038,6 +1038,46 @@ async def get_directory_messages(current_user: User = Depends(get_current_user))
     
     return messages
 
+# ==================== DIRECTORY ORGANIZATIONS ====================
+
+@api_router.get("/directory/organizations")
+async def get_directory_organizations(category: Optional[str] = None):
+    """Get all organizations from the resource directory"""
+    query = {}
+    if category and category != "all":
+        query["category"] = category
+    
+    resources = await db.resources.find(query, {"_id": 0}).to_list(1000)
+    return resources
+
+@api_router.get("/directory/organizations/{org_id}")
+async def get_organization_detail(org_id: str):
+    """Get a single organization by ID"""
+    org = await db.resources.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return org
+
+@api_router.post("/admin/seed-resources")
+async def seed_resources_endpoint():
+    """One-time endpoint to seed the database with Las Vegas resources"""
+    # Check if already seeded
+    existing_count = await db.resources.count_documents({})
+    if existing_count > 0:
+        return {"message": f"Database already has {existing_count} resources. Skipping seed.", "seeded": False}
+    
+    # Import and insert all resources
+    from seed_resources import ALL_RESOURCES
+    
+    inserted_count = 0
+    for resource in ALL_RESOURCES:
+        # Add created_at timestamp
+        resource["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.resources.insert_one(resource)
+        inserted_count += 1
+    
+    return {"message": f"Successfully seeded {inserted_count} resources", "seeded": True, "count": inserted_count}
+
 # ==================== HUD HMIS API ENDPOINTS ====================
 
 # Client Profile (Universal Data Elements)
