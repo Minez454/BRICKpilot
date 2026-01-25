@@ -101,6 +101,105 @@ class WorkbookTask(BaseModel):
     completed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class Workbook(BaseModel):
+    """AI-Generated Personalized Workbook"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    category: str  # life_skills, financial, safety, housing, health, employment, legal, emotional
+    description: str
+    why_recommended: str  # AI explanation of why this workbook was created for this user
+    difficulty: int = 1  # 1-5
+    estimated_time: str = "15-30 minutes"
+    
+    # Content sections
+    lessons: List[Dict[str, Any]] = []  # [{title, content, key_points}]
+    exercises: List[Dict[str, Any]] = []  # [{question, type, options, correct_answer, explanation}]
+    action_items: List[str] = []  # Real-world tasks to complete
+    resources: List[Dict[str, str]] = []  # [{title, url, description}]
+    
+    # Progress tracking
+    progress: int = 0  # 0-100
+    completed_lessons: List[str] = []
+    completed_exercises: List[str] = []
+    completed_actions: List[str] = []
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+# Comprehensive life skills topic library
+WORKBOOK_TOPICS = {
+    "life_skills": [
+        {"id": "cooking_basics", "title": "Kitchen Fundamentals", "desc": "Basic cooking techniques, simple recipes, food safety"},
+        {"id": "meal_planning", "title": "Meal Planning on a Budget", "desc": "Planning nutritious meals, stretching food dollars"},
+        {"id": "grocery_shopping", "title": "Smart Grocery Shopping", "desc": "Reading labels, comparing prices, avoiding impulse buys"},
+        {"id": "food_storage", "title": "Food Storage & Safety", "desc": "Keeping food fresh, avoiding waste, safe handling"},
+        {"id": "laundry_basics", "title": "Laundry & Clothing Care", "desc": "Washing, drying, stain removal, clothing maintenance"},
+        {"id": "cleaning_home", "title": "Keeping a Clean Space", "desc": "Cleaning routines, organizing, maintaining hygiene"},
+        {"id": "time_management", "title": "Managing Your Time", "desc": "Scheduling, prioritizing, building routines"},
+        {"id": "public_transit", "title": "Navigating Public Transit", "desc": "Using buses, reading schedules, trip planning"},
+    ],
+    "financial": [
+        {"id": "budgeting_101", "title": "Budgeting Basics", "desc": "Tracking income/expenses, creating a spending plan"},
+        {"id": "bank_account", "title": "Opening a Bank Account", "desc": "Types of accounts, what to bring, avoiding fees"},
+        {"id": "building_credit", "title": "Building Credit", "desc": "Understanding credit scores, starting from scratch"},
+        {"id": "avoiding_debt", "title": "Avoiding Debt Traps", "desc": "Payday loans, rent-to-own, high-interest dangers"},
+        {"id": "saving_money", "title": "Saving Money", "desc": "Emergency funds, saving strategies, compound growth"},
+        {"id": "understanding_taxes", "title": "Understanding Taxes", "desc": "Filing basics, EITC, free tax prep resources"},
+        {"id": "benefits_maximizing", "title": "Maximizing Benefits", "desc": "SNAP, Medicaid, housing assistance, how to apply"},
+    ],
+    "safety_awareness": [
+        {"id": "spotting_scams", "title": "Spotting Scams", "desc": "Common scams, red flags, protecting yourself"},
+        {"id": "recognize_narcissist", "title": "Recognizing Narcissistic Behavior", "desc": "Traits, manipulation tactics, protecting yourself"},
+        {"id": "gaslighting", "title": "Understanding Gaslighting", "desc": "What it is, examples, how to respond"},
+        {"id": "manipulation_tactics", "title": "Manipulation Tactics", "desc": "Love bombing, guilt trips, emotional blackmail"},
+        {"id": "healthy_boundaries", "title": "Setting Healthy Boundaries", "desc": "What boundaries are, how to set and enforce them"},
+        {"id": "domestic_violence", "title": "Recognizing Domestic Violence", "desc": "Signs, safety planning, resources"},
+        {"id": "online_safety", "title": "Online Safety", "desc": "Passwords, privacy, avoiding online predators"},
+        {"id": "street_safety", "title": "Street Safety", "desc": "Awareness, avoiding dangerous situations, self-protection"},
+    ],
+    "housing": [
+        {"id": "tenant_rights", "title": "Know Your Tenant Rights", "desc": "Nevada tenant laws, lease basics, eviction process"},
+        {"id": "apartment_hunting", "title": "Finding an Apartment", "desc": "Where to look, what to ask, application tips"},
+        {"id": "rental_applications", "title": "Rental Applications", "desc": "What landlords look for, references, background checks"},
+        {"id": "being_good_tenant", "title": "Being a Good Tenant", "desc": "Paying rent, communicating, maintenance requests"},
+        {"id": "utility_setup", "title": "Setting Up Utilities", "desc": "Electric, water, internet - what to expect"},
+        {"id": "roommate_success", "title": "Living with Roommates", "desc": "Communication, shared expenses, conflict resolution"},
+    ],
+    "employment": [
+        {"id": "resume_writing", "title": "Writing a Resume", "desc": "Format, content, highlighting your strengths"},
+        {"id": "job_searching", "title": "Job Search Strategies", "desc": "Where to look, networking, following up"},
+        {"id": "interview_skills", "title": "Interview Skills", "desc": "Preparation, common questions, making impressions"},
+        {"id": "workplace_success", "title": "Succeeding at Work", "desc": "Professionalism, communication, growing your career"},
+        {"id": "handling_conflict", "title": "Workplace Conflict", "desc": "Dealing with difficult coworkers, talking to managers"},
+        {"id": "workers_rights", "title": "Know Your Worker Rights", "desc": "Minimum wage, breaks, discrimination, safety"},
+    ],
+    "health_wellness": [
+        {"id": "mental_health_basics", "title": "Mental Health Basics", "desc": "Understanding anxiety, depression, when to seek help"},
+        {"id": "stress_management", "title": "Managing Stress", "desc": "Coping techniques, relaxation, healthy outlets"},
+        {"id": "substance_awareness", "title": "Substance Use Awareness", "desc": "Understanding addiction, harm reduction, recovery"},
+        {"id": "sleep_hygiene", "title": "Better Sleep", "desc": "Sleep habits, creating routines, dealing with insomnia"},
+        {"id": "nutrition_basics", "title": "Nutrition Basics", "desc": "Balanced eating, reading nutrition labels, hydration"},
+        {"id": "navigating_healthcare", "title": "Navigating Healthcare", "desc": "Finding providers, Medicaid, emergency vs urgent care"},
+        {"id": "medication_management", "title": "Managing Medications", "desc": "Taking meds correctly, refills, assistance programs"},
+    ],
+    "legal_navigation": [
+        {"id": "court_basics", "title": "Understanding Court", "desc": "Types of courts, what to expect, how to prepare"},
+        {"id": "dealing_with_warrants", "title": "Dealing with Warrants", "desc": "Types of warrants, quashing, turning yourself in safely"},
+        {"id": "record_sealing", "title": "Sealing Your Record", "desc": "Eligibility, process, how it helps"},
+        {"id": "child_support", "title": "Child Support Basics", "desc": "How it works, modifications, enforcement"},
+        {"id": "id_replacement", "title": "Replacing Your ID", "desc": "Birth certificate, Social Security card, state ID"},
+    ],
+    "communication": [
+        {"id": "effective_communication", "title": "Effective Communication", "desc": "Active listening, expressing needs, being assertive"},
+        {"id": "conflict_resolution", "title": "Resolving Conflicts", "desc": "De-escalation, compromise, knowing when to walk away"},
+        {"id": "asking_for_help", "title": "Asking for Help", "desc": "Overcoming shame, who to ask, how to ask"},
+        {"id": "professional_communication", "title": "Professional Communication", "desc": "Emails, phone calls, in-person meetings"},
+    ]
+}
+
 class Resource(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
