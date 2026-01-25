@@ -92,6 +92,20 @@ const getOrgTheme = (orgName) => {
       tagline: "County-Wide Social Services",
       headerBg: "from-cyan-700 via-teal-700 to-cyan-800"
     },
+    "H.E.L.P. of Southern Nevada": {
+      primary: "from-blue-600 via-sky-500 to-blue-600",
+      accent: "blue",
+      icon: Heart,
+      tagline: "Homeless Emergency Lodging Program",
+      headerBg: "from-blue-700 via-sky-600 to-blue-700"
+    },
+    "The Courtyard Homeless Resource Center": {
+      primary: "from-stone-600 via-amber-600 to-stone-700",
+      accent: "stone",
+      icon: Heart,
+      tagline: "A Safe Place to Start Again",
+      headerBg: "from-stone-700 via-amber-700 to-stone-800"
+    },
     "default": {
       primary: "from-emerald-500 via-green-500 to-emerald-600",
       accent: "emerald",
