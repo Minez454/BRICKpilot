@@ -17,6 +17,7 @@ import AgencyDashboard from "@/pages/AgencyDashboard";
 import CleanupDashboard from "@/pages/CleanupDashboard";
 import LegalAidPortal from "@/pages/LegalAidPortal";
 import Directory from "@/pages/Directory";
+import HUDIntake from "@/pages/HUDIntake";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
