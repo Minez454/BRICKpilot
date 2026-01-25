@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import axios from "axios";
 import { toast } from "sonner";
-import { Sparkles, Heart, Shield, BookOpen, Map, Scale, Star, ArrowDown } from "lucide-react";
+import { Sparkles, Heart, Shield, BookOpen, Map, Scale, Star, ArrowDown, KeyRound } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -18,10 +19,62 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   const authCardRef = useRef(null);
+  
+  // Forgot Password state
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: request, 2: reset
+  const [resetToken, setResetToken] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
 
   const scrollToRegister = () => {
     setActiveTab("register");
     authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.target);
+    const email = formData.get("forgot_email");
+    
+    try {
+      const res = await axios.post(`${API}/auth/forgot-password`, { email });
+      if (res.data.reset_token) {
+        setResetToken(res.data.reset_token);
+        setResetEmail(email);
+        setForgotStep(2);
+        toast.success("Reset token generated! Enter it below with your new password.");
+      } else {
+        toast.info(res.data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to request reset");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.target);
+    
+    try {
+      await axios.post(`${API}/auth/reset-password`, {
+        email: resetEmail,
+        token: formData.get("reset_token"),
+        new_password: formData.get("new_password")
+      });
+      toast.success("Password reset successfully! You can now login.");
+      setForgotOpen(false);
+      setForgotStep(1);
+      setResetToken("");
+      setResetEmail("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async (e) => {
