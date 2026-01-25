@@ -59,6 +59,13 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 - ✅ **Feature cards with rainbow gradient borders**
 - ✅ **Role-specific color themes** (emerald for agency, amber for cleanup, purple for legal)
 
+### Notification System (January 2026)
+- ✅ **Sweep Alert Notifications** - Cleanup crews post sweeps → All users get notified instantly
+- ✅ **Notification Bell** - Shows unread count with red badge
+- ✅ **Notification Panel** - Slide-out panel with all alerts, timestamps, source organization
+- ✅ **Mark as Read** - Individual or bulk read actions
+- ✅ **Real-time Polling** - Checks for new notifications every 30 seconds
+
 ### Backend APIs (Complete)
 - `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
 - `/api/chat/message` - AI chat with session management
@@ -71,6 +78,7 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 - `/api/legal/cases` - Legal case management
 - `/api/resources` - Las Vegas services
 - `/api/events/popup` - Pop-up events
+- `/api/notifications` - GET/POST/PUT notifications system
 
 ---
 
