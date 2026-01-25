@@ -24,17 +24,24 @@ const API = `${BACKEND_URL}/api`;
 
 const CATEGORIES = [
   { id: "all", label: "All Services", icon: Building2 },
+  { id: "coordinated_entry", label: "Coordinated Entry", icon: MapPin },
   { id: "shelter", label: "Shelters", icon: Home },
   { id: "food", label: "Food", icon: Utensils },
-  { id: "health", label: "Healthcare", icon: Stethoscope },
-  { id: "recovery", label: "Recovery", icon: Heart },
-  { id: "legal", label: "Legal Aid", icon: Scale },
-  { id: "veterans", label: "Veterans", icon: Star },
-  { id: "youth", label: "Youth Services", icon: Users },
-  { id: "outreach", label: "Outreach", icon: MapPin },
-  { id: "resource_center", label: "Resource Centers", icon: Building2 },
-  { id: "social_services", label: "Social Services", icon: Heart }
+  { id: "medical", label: "Healthcare", icon: Stethoscope },
+  { id: "legal", label: "Legal Aid", icon: Scale }
 ];
+
+// Color mapping based on category
+const getCategoryColor = (category) => {
+  const colorMap = {
+    coordinated_entry: "emerald",
+    shelter: "blue",
+    food: "green",
+    medical: "rose",
+    legal: "indigo"
+  };
+  return colorMap[category] || "stone";
+};
 
 export default function Directory() {
   const { user, token, logout } = useContext(AuthContext);
@@ -44,11 +51,31 @@ export default function Directory() {
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const filteredOrgs = ORGANIZATIONS.filter(org => {
-    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         org.services.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Fetch organizations from API
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API}/directory/organizations`);
+        setOrganizations(response.data);
+      } catch (error) {
+        console.error("Failed to fetch organizations:", error);
+        toast.error("Failed to load organizations");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrganizations();
+  }, []);
+
+  const filteredOrgs = organizations.filter(org => {
+    const matchesSearch = org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         org.services?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         org.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || org.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
