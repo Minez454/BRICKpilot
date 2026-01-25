@@ -40,9 +40,15 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 - ✅ **Unified Agency Database** - Cross-agency client data sharing with HUD reporting
 
 ### Dashboard Implementations (Complete)
-- ✅ **Agency Dashboard** - Unified client list, HUD reports, search/filter
+- ✅ **Agency Dashboard** - Unified client list, HUD reports, search/filter, organization-specific theming
 - ✅ **Cleanup Dashboard** - Post sweep schedules, view scheduled operations
 - ✅ **Legal Aid Portal** - Case management tabs, consultation requests, resources library
+- ✅ **Dashboard Overview Cards** - Key metrics at a glance on all role dashboards
+
+### Organization-Specific Branding (January 2026)
+- ✅ **Shine-A-Light Las Vegas** - Amber/yellow sun theme with "Bringing Light to Those in Need" tagline
+- ✅ **Recover Las Vegas** - Teal/emerald leaf theme with "Recovery. Restoration. Hope." tagline
+- ✅ **HELP of Southern Nevada** - Blue/indigo theme with custom branding
 
 ### UI/UX Redesign (Complete - January 2026)
 - ✅ **Premium Wizard of Oz Theme** applied to all pages
