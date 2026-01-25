@@ -869,6 +869,40 @@ async def delete_notification(notification_id: str, current_user: User = Depends
         raise HTTPException(status_code=404, detail="Notification not found")
     return {"message": "Notification deleted"}
 
+# ==================== DIRECTORY MESSAGING ====================
+
+@api_router.post("/directory/message")
+async def send_directory_message(data: dict, current_user: User = Depends(get_current_user)):
+    """Send a message to an organization through the directory"""
+    message = {
+        "id": str(uuid.uuid4()),
+        "from_user_id": current_user.id,
+        "from_user_name": current_user.full_name,
+        "from_user_email": current_user.email,
+        "organization_id": data.get("organization_id"),
+        "organization_name": data.get("organization_name"),
+        "message": data.get("message"),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.directory_messages.insert_one(message)
+    
+    return {"message": "Message sent successfully", "message_id": message["id"]}
+
+@api_router.get("/directory/messages")
+async def get_directory_messages(current_user: User = Depends(get_current_user)):
+    """Get messages for agency staff"""
+    if current_user.role not in ["agency_staff", "caseworker"]:
+        raise HTTPException(status_code=403, detail="Only agency staff can view messages")
+    
+    messages = await db.directory_messages.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return messages
+
 # ==================== CLEANUP SWEEPS ====================
 
 # Cleanup-prefixed routes for frontend compatibility
