@@ -5,7 +5,7 @@ from datetime import datetime
 import base64
 
 class BRICKAPITester:
-    def __init__(self, base_url="https://homeless-ally.preview.emergentagent.com"):
+    def __init__(self, base_url="https://vegas-housing.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None
