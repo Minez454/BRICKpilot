@@ -263,21 +263,26 @@ export default function Directory() {
       {/* Organization Detail Dialog */}
       <Dialog open={!!selectedOrg} onOpenChange={(open) => !open && setSelectedOrg(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedOrg && (
+          {selectedOrg && (() => {
+            const orgColors = getColorClasses(getOrgColor(selectedOrg));
+            return (
             <>
               <DialogHeader>
-                <div className={`-mx-6 -mt-6 mb-4 p-6 ${getColorClasses(selectedOrg.color).light} border-b-2 ${getColorClasses(selectedOrg.color).border}`}>
+                <div className={`-mx-6 -mt-6 mb-4 p-6 ${orgColors.light} border-b-2 ${orgColors.border}`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-16 h-16 ${getColorClasses(selectedOrg.color).bg} rounded-2xl flex items-center justify-center shadow-xl`}>
+                    <div className={`w-16 h-16 ${orgColors.bg} rounded-2xl flex items-center justify-center shadow-xl`}>
                       <Building2 className="h-8 w-8 text-white" />
                     </div>
                     <div>
-                      <DialogTitle className={`text-2xl ${getColorClasses(selectedOrg.color).text}`} style={{fontFamily: 'Cinzel, serif'}}>
+                      <DialogTitle className={`text-2xl ${orgColors.text}`} style={{fontFamily: 'Cinzel, serif'}}>
                         {selectedOrg.name}
                       </DialogTitle>
-                      <Badge className={`mt-1 ${getColorClasses(selectedOrg.color).bg} text-white capitalize`}>
-                        {selectedOrg.category.replace("_", " ")}
+                      <Badge className={`mt-1 ${orgColors.bg} text-white capitalize`}>
+                        {selectedOrg.category?.replace(/_/g, " ")}
                       </Badge>
+                      {selectedOrg.is_coordinated_entry && (
+                        <Badge className="ml-2 mt-1 bg-amber-500 text-white">Coordinated Entry</Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -286,50 +291,53 @@ export default function Directory() {
                 </DialogDescription>
               </DialogHeader>
 
+              {selectedOrg.notes && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                  <p className="text-sm text-amber-800 font-medium">Note: {selectedOrg.notes}</p>
+                </div>
+              )}
+
               <Tabs defaultValue="services" className="mt-4">
-                <TabsList className="grid grid-cols-3 w-full">
+                <TabsList className="grid grid-cols-2 w-full">
                   <TabsTrigger value="services">Services</TabsTrigger>
                   <TabsTrigger value="contact">Contact</TabsTrigger>
-                  <TabsTrigger value="applications">Applications</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="services" className="mt-4">
                   <div className="grid grid-cols-2 gap-2">
-                    {selectedOrg.services.map((service, idx) => (
-                      <div key={idx} className={`p-3 ${getColorClasses(selectedOrg.color).light} rounded-lg border ${getColorClasses(selectedOrg.color).border}`}>
+                    {selectedOrg.services?.map((service, idx) => (
+                      <div key={idx} className={`p-3 ${orgColors.light} rounded-lg border ${orgColors.border}`}>
                         <span className="text-sm font-medium text-gray-700">{service}</span>
                       </div>
                     ))}
                   </div>
+                  {selectedOrg.target_population && (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm"><span className="font-semibold">Target Population:</span> {selectedOrg.target_population}</p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="contact" className="mt-4 space-y-4">
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <MapPin className={`h-5 w-5 ${getColorClasses(selectedOrg.color).text} flex-shrink-0 mt-0.5`} />
+                    <MapPin className={`h-5 w-5 ${orgColors.text} flex-shrink-0 mt-0.5`} />
                     <div>
                       <p className="font-semibold text-gray-800">Address</p>
                       <p className="text-gray-600">{selectedOrg.address}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Phone className={`h-5 w-5 ${getColorClasses(selectedOrg.color).text} flex-shrink-0 mt-0.5`} />
+                    <Phone className={`h-5 w-5 ${orgColors.text} flex-shrink-0 mt-0.5`} />
                     <div>
                       <p className="font-semibold text-gray-800">Phone</p>
                       <a href={`tel:${selectedOrg.phone}`} className="text-blue-600 hover:underline">{selectedOrg.phone}</a>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Clock className={`h-5 w-5 ${getColorClasses(selectedOrg.color).text} flex-shrink-0 mt-0.5`} />
+                    <Clock className={`h-5 w-5 ${orgColors.text} flex-shrink-0 mt-0.5`} />
                     <div>
                       <p className="font-semibold text-gray-800">Hours</p>
                       <p className="text-gray-600">{selectedOrg.hours}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Mail className={`h-5 w-5 ${getColorClasses(selectedOrg.color).text} flex-shrink-0 mt-0.5`} />
-                    <div>
-                      <p className="font-semibold text-gray-800">Email</p>
-                      <a href={`mailto:${selectedOrg.email}`} className="text-blue-600 hover:underline">{selectedOrg.email}</a>
                     </div>
                   </div>
                   {selectedOrg.website && (
@@ -337,35 +345,19 @@ export default function Directory() {
                       href={selectedOrg.website} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className={`flex items-center justify-center gap-2 p-4 ${getColorClasses(selectedOrg.color).bg} text-white rounded-xl font-semibold hover:opacity-90 transition-opacity`}
+                      className={`flex items-center justify-center gap-2 p-4 ${orgColors.bg} text-white rounded-xl font-semibold hover:opacity-90 transition-opacity`}
                     >
                       <ExternalLink className="h-5 w-5" />
                       Visit Website
                     </a>
                   )}
                 </TabsContent>
-
-                <TabsContent value="applications" className="mt-4">
-                  <div className="space-y-3">
-                    {selectedOrg.applications.map((app, idx) => (
-                      <div key={idx} className={`flex items-center justify-between p-4 ${getColorClasses(selectedOrg.color).light} rounded-xl border ${getColorClasses(selectedOrg.color).border}`}>
-                        <div className="flex items-center gap-3">
-                          <FileText className={`h-5 w-5 ${getColorClasses(selectedOrg.color).text}`} />
-                          <span className="font-medium text-gray-800">{app}</span>
-                        </div>
-                        <Button size="sm" className={getColorClasses(selectedOrg.color).bg}>
-                          Request
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
               </Tabs>
 
               {/* Action Buttons */}
               <div className="flex gap-3 mt-6 pt-4 border-t">
                 <Button 
-                  className={`flex-1 ${getColorClasses(selectedOrg.color).bg} text-white`}
+                  className={`flex-1 ${orgColors.bg} text-white`}
                   onClick={() => setMessageOpen(true)}
                   data-testid="message-org-btn"
                 >
@@ -374,7 +366,7 @@ export default function Directory() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className={`flex-1 border-2 ${getColorClasses(selectedOrg.color).border} ${getColorClasses(selectedOrg.color).text}`}
+                  className={`flex-1 border-2 ${orgColors.border} ${orgColors.text}`}
                   onClick={() => window.open(`tel:${selectedOrg.phone}`)}
                 >
                   <Phone className="mr-2 h-4 w-4" />
@@ -382,7 +374,8 @@ export default function Directory() {
                 </Button>
               </div>
             </>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
