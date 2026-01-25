@@ -7,6 +7,41 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 
 All core features working with 100% test pass rate.
 
+### NEW: HUD FY2026 HMIS Compliance Added!
+BRICK is now a **federally compliant Homeless Management Information System** that can replace Bitfocus Clarity.
+
+---
+
+## HUD HMIS Features (NEW)
+
+### Database Schema (FY2026 Compliant)
+- **Client Profile** - All Universal Data Elements (3.01-3.07)
+- **Enrollments** - Project entry/exit with 3.917 Prior Living Situation
+- **Coordinated Entry Assessment** - VI-SPDAT scoring with auto-prioritization
+- **Services** - Service tracking (4.12)
+- **Bed Nights** - Shelter stay tracking (4.14)
+
+### Key HUD Fields Captured
+- Name Data Quality (3.01)
+- SSN Data Quality (3.02)
+- DOB Data Quality (3.03)
+- Race - Multi-select including MENA (3.04)
+- Ethnicity (3.05)
+- Gender Identity - FY2026 compliant multi-select (3.06)
+- Sex Assigned at Birth - NEW required field (3.06a)
+- Veteran Status (3.07)
+- Prior Living Situation with logic tree (3.917)
+- Destination on exit (3.12)
+
+### HUD CSV Export
+Agencies can now click **"Generate HUD CSV"** to download a ZIP with:
+- Client.csv
+- Enrollment.csv
+- Exit.csv
+- Services.csv
+
+This ZIP can be imported directly into Clark County's HMIS system!
+
 ---
 
 ## Complete Login Credentials
