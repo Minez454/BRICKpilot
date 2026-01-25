@@ -16,6 +16,13 @@ const API = `${BACKEND_URL}/api`;
 export default function LandingPage() {
   const { login } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
+  const authCardRef = useRef(null);
+
+  const scrollToRegister = () => {
+    setActiveTab("register");
+    authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
