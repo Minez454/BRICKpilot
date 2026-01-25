@@ -221,6 +221,140 @@ class LegalForm(BaseModel):
     instructions: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# ==================== HUD HMIS MODELS (FY2026 Compliant) ====================
+
+class ClientProfile(BaseModel):
+    """HUD Universal Data Elements - Client Profile"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    
+    # 3.01 Name
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    suffix: Optional[str] = None
+    name_data_quality: int = 99  # 1=Full, 2=Partial, 8=Doesn't know, 9=Prefers not, 99=Not collected
+    
+    # 3.02 Social Security Number
+    ssn: Optional[str] = None  # Encrypted
+    ssn_data_quality: int = 99
+    
+    # 3.03 Date of Birth
+    dob: Optional[str] = None
+    dob_data_quality: int = 99
+    
+    # 3.04 Race (list for multi-select)
+    race: List[int] = []  # Can select multiple
+    
+    # 3.05 Ethnicity
+    ethnicity: int = 99
+    
+    # 3.06 Gender (list for multi-select per FY2026)
+    gender: List[int] = []
+    
+    # 3.06a Sex Assigned at Birth (NEW FY2026 - Required separate)
+    sex_at_birth: int = 99
+    
+    # 3.07 Veteran Status
+    veteran_status: int = 99
+    
+    # Additional contact info
+    phone_primary: Optional[str] = None
+    phone_secondary: Optional[str] = None
+    email: Optional[str] = None
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class Enrollment(BaseModel):
+    """HUD Project Enrollment - Entry/Exit tracking"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    user_id: str
+    project_id: str = "BRICK_LV"  # Project identifier
+    
+    # 3.10 Project Start Date
+    project_start_date: str
+    
+    # 3.11 Project Exit Date
+    project_exit_date: Optional[str] = None
+    
+    # 3.15 Relationship to Head of Household
+    relationship_to_hoh: int = 1  # 1=Self (HoH)
+    
+    # 3.20 Housing Move-In Date
+    housing_move_in_date: Optional[str] = None
+    
+    # 3.917 Prior Living Situation (CRITICAL)
+    prior_living_situation: int = 99
+    prior_living_situation_category: Optional[str] = None  # homeless, institutional, transitional
+    length_of_stay: int = 99
+    approximate_start_date_homelessness: Optional[str] = None
+    times_homeless_past_3_years: int = 99
+    months_homeless_past_3_years: int = 99
+    
+    # 3.12 Destination (on exit)
+    destination: Optional[int] = None
+    destination_subsidy_type: Optional[int] = None
+    
+    # Status
+    status: str = "active"  # active, exited
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class CoordinatedEntryAssessment(BaseModel):
+    """HUD Coordinated Entry Assessment - VI-SPDAT scoring"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    user_id: str
+    enrollment_id: str
+    
+    # 4.19 Coordinated Entry
+    assessment_date: str
+    assessment_type: int = 3  # 1=Phone, 2=Virtual, 3=In Person
+    assessment_level: int = 2  # 1=Crisis, 2=Housing Needs
+    prioritization_status: int = 99  # 1=On list, 2=Not on list
+    
+    # VI-SPDAT Score (Vulnerability Index)
+    vulnerability_score: int = 0  # 0-17 typically
+    housing_recommendation: Optional[str] = None  # PSH, RRH, Prevention
+    
+    # Assessment responses (store raw answers)
+    assessment_responses: Dict[str, Any] = {}
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class HMISService(BaseModel):
+    """HUD Service Record - 4.12"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    enrollment_id: str
+    
+    service_date: str
+    service_type: int  # 1=Food, 2=Housing search, 3=Case mgmt, 4=Outreach, 5=Transport, 6=Other
+    service_description: Optional[str] = None
+    provider_organization: Optional[str] = None
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class BedNight(BaseModel):
+    """HUD Bed Night Record - 4.14 (for shelter tracking)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    enrollment_id: str
+    
+    bed_night_date: str
+    location_id: Optional[str] = None
+    auto_recorded: bool = False  # True if recorded via geofencing
+    
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 # ==================== AUTH UTILITIES ====================
 
 def verify_password(plain_password, hashed_password):
