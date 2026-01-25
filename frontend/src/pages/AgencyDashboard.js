@@ -421,9 +421,9 @@ export default function AgencyDashboard() {
                       <CardTitle className="text-2xl" style={{fontFamily: 'Cinzel, serif'}}>HUD Compliance & Grant Reports</CardTitle>
                       <CardDescription className="text-indigo-100">Generate reports for funding applications</CardDescription>
                     </div>
-                    <Button className="bg-white text-indigo-700 hover:bg-gray-100 font-bold shadow-lg" data-testid="export-report-btn">
+                    <Button onClick={exportHUDCsv} className="bg-white text-indigo-700 hover:bg-gray-100 font-bold shadow-lg" data-testid="export-report-btn">
                       <Download className="mr-2 h-5 w-5" />
-                      Export Report
+                      Generate HUD CSV
                     </Button>
                   </div>
                 </CardHeader>
