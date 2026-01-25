@@ -160,9 +160,12 @@ export default function BrickChat() {
             <p className="text-xs text-emerald-100">Your AI Caseworker</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-white" data-testid="user-name">{user?.full_name}</p>
-          <p className="text-xs text-emerald-200">{user?.email}</p>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <div className="text-right">
+            <p className="text-sm font-medium text-white" data-testid="user-name">{user?.full_name}</p>
+            <p className="text-xs text-emerald-200">{user?.email}</p>
+          </div>
         </div>
       </div>
 
