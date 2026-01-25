@@ -36,6 +36,62 @@ const getOrgTheme = (orgName) => {
       tagline: "Helping People. Changing Lives.",
       headerBg: "from-blue-600 via-indigo-600 to-purple-600"
     },
+    "Catholic Charities of Southern Nevada": {
+      primary: "from-red-500 via-rose-500 to-red-600",
+      accent: "rose",
+      icon: Heart,
+      tagline: "Serving Those in Need Since 1941",
+      headerBg: "from-red-600 via-rose-600 to-red-700"
+    },
+    "Salvation Army Las Vegas": {
+      primary: "from-red-600 via-red-500 to-orange-600",
+      accent: "red",
+      icon: Heart,
+      tagline: "Doing the Most Good",
+      headerBg: "from-red-700 via-red-600 to-orange-600"
+    },
+    "Nevada Partnership for Homeless Youth": {
+      primary: "from-purple-500 via-violet-500 to-purple-600",
+      accent: "purple",
+      icon: Heart,
+      tagline: "Supporting Youth. Building Futures.",
+      headerBg: "from-purple-600 via-violet-600 to-purple-700"
+    },
+    "Veterans Village Las Vegas": {
+      primary: "from-blue-600 via-blue-500 to-cyan-600",
+      accent: "blue",
+      icon: Star,
+      tagline: "Serving Those Who Served",
+      headerBg: "from-blue-700 via-blue-600 to-cyan-600"
+    },
+    "Shannon West Homeless Youth Center": {
+      primary: "from-pink-500 via-rose-500 to-pink-600",
+      accent: "pink",
+      icon: Heart,
+      tagline: "A Safe Place for Youth",
+      headerBg: "from-pink-600 via-rose-600 to-pink-700"
+    },
+    "TRAC-B Harm Reduction": {
+      primary: "from-orange-500 via-amber-500 to-orange-600",
+      accent: "orange",
+      icon: Heart,
+      tagline: "Reducing Harm. Saving Lives.",
+      headerBg: "from-orange-600 via-amber-600 to-orange-700"
+    },
+    "City of Las Vegas": {
+      primary: "from-slate-600 via-gray-600 to-slate-700",
+      accent: "slate",
+      icon: Star,
+      tagline: "Official City Homeless Services",
+      headerBg: "from-slate-700 via-gray-700 to-slate-800"
+    },
+    "Clark County Social Services": {
+      primary: "from-cyan-600 via-teal-600 to-cyan-700",
+      accent: "cyan",
+      icon: Star,
+      tagline: "County-Wide Social Services",
+      headerBg: "from-cyan-700 via-teal-700 to-cyan-800"
+    },
     "default": {
       primary: "from-emerald-500 via-green-500 to-emerald-600",
       accent: "emerald",
