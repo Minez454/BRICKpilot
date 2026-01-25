@@ -231,7 +231,7 @@ export default function LandingPage() {
         </div>
 
         {/* Auth Card */}
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md mx-auto" ref={authCardRef}>
           <Card className="bg-white/95 backdrop-blur-xl border-2 border-yellow-400/50 shadow-2xl overflow-hidden" data-testid="auth-card">
             <div className="h-2 bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-500"></div>
             <CardHeader className="text-center pb-2">
@@ -244,7 +244,7 @@ export default function LandingPage() {
               <CardDescription className="text-gray-600">Step onto the yellow brick road</CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <Tabs defaultValue="login" data-testid="auth-tabs">
+              <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="auth-tabs">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-emerald-50 p-1 rounded-full">
                   <TabsTrigger 
                     value="login" 
