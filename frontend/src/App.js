@@ -181,6 +181,12 @@ function App() {
                 token ? <Directory /> : <Navigate to="/" replace />
               }
             />
+            <Route
+              path="/intake"
+              element={
+                token ? <HUDIntake /> : <Navigate to="/" replace />
+              }
+            />
           </Routes>
           <Toaster position="top-center" richColors />
         </div>
