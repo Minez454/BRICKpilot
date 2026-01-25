@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef } from "react";
 import { AuthContext } from "../App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast } from "sonner";
-import { Sparkles, Heart, Shield, BookOpen, Map, Scale, Star } from "lucide-react";
+import { Sparkles, Heart, Shield, BookOpen, Map, Scale, Star, ArrowDown } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
