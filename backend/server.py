@@ -198,6 +198,19 @@ class DossierItemCreate(BaseModel):
     content: str
     source: str = "manual"
 
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    notification_type: str  # sweep_alert, event, legal, system
+    title: str
+    message: str
+    priority: str = "normal"  # urgent, high, normal, low
+    read: bool = False
+    action_url: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class LegalForm(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
