@@ -771,7 +771,36 @@ async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = D
     }
     
     await db.cleanup_sweeps.insert_one(sweep)
-    return sweep
+    
+    # Create notifications for ALL regular users
+    all_users = await db.users.find({"role": "user"}, {"_id": 0, "id": 1}).to_list(10000)
+    
+    notifications = []
+    for user in all_users:
+        notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "notification_type": "sweep_alert",
+            "title": "⚠️ Upcoming Area Cleanup Alert",
+            "message": f"A cleanup sweep is scheduled at {sweep_data.get('location')} on {sweep_data.get('date')} at {sweep_data.get('time')}. Please prepare to relocate your belongings.",
+            "priority": "urgent",
+            "read": False,
+            "action_url": "/resources",
+            "metadata": {
+                "sweep_id": sweep["id"],
+                "location": sweep_data.get("location"),
+                "date": sweep_data.get("date"),
+                "time": sweep_data.get("time"),
+                "posted_by": current_user.organization
+            },
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        notifications.append(notification)
+    
+    if notifications:
+        await db.notifications.insert_many(notifications)
+    
+    return {"sweep": sweep, "notifications_sent": len(notifications)}
 
 # ==================== LEGAL CASES ====================
 
