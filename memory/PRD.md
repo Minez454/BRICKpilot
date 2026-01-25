@@ -120,14 +120,16 @@ Build a full-stack application named "BRICK", designed as an AI-powered casework
 ```
 
 ## Test Credentials
-| Role | Email | Password |
-|------|-------|----------|
-| Regular User | testuser@example.com | password123 |
-| Agency Staff | agency@help.org | agency123 |
-| Cleanup Crew | cleanup@vegas.gov | cleanup123 |
-| Legal Aid | lawyer@legalaid.org | lawyer123 |
-| Paralegal | paralegal@legalaid.org | paralegal123 |
-| Caseworker | caseworker@brick.org | caseworker123 |
+| Role | Email | Password | Organization |
+|------|-------|----------|--------------|
+| Regular User | testuser@example.com | password123 | - |
+| Agency Staff | agency@help.org | agency123 | HELP of Southern Nevada |
+| **Shine-A-Light** | outreach@shinealightlv.org | shinealight2024 | Shine-A-Light Las Vegas |
+| **Recover LV** | team@recoverlv.org | recover2024 | Recover Las Vegas |
+| Cleanup Crew | cleanup@vegas.gov | cleanup123 | Las Vegas Metro |
+| Legal Aid | lawyer@legalaid.org | lawyer123 | Legal Aid Center |
+| Paralegal | paralegal@legalaid.org | paralegal123 | Legal Aid Center |
+| Caseworker | caseworker@brick.org | caseworker123 | BRICK Platform |
 
 ## Third-Party Integrations
 - **Emergent LLM Key** - Powers BRICK AI chatbot
