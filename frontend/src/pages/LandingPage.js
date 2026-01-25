@@ -116,11 +116,36 @@ export default function LandingPage() {
             store vital documents securely, and build your path home.
           </p>
           
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+            <Button 
+              onClick={scrollToRegister}
+              className="btn-gold text-xl px-10 py-7 shadow-2xl"
+              data-testid="get-started-btn"
+            >
+              <Sparkles className="mr-2 h-6 w-6" />
+              Get Started Free
+            </Button>
+            <Button 
+              onClick={() => authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              variant="outline"
+              className="bg-white/10 border-2 border-white/50 text-white hover:bg-white/20 px-8 py-6 text-lg"
+              data-testid="login-btn-hero"
+            >
+              I Have an Account
+            </Button>
+          </div>
+          
           {/* Decorative Line */}
           <div className="flex items-center justify-center mt-8 gap-3">
             <div className="h-px w-16 bg-gradient-to-r from-transparent to-yellow-400"></div>
             <Star className="w-4 h-4 text-yellow-400" />
             <div className="h-px w-16 bg-gradient-to-l from-transparent to-yellow-400"></div>
+          </div>
+          
+          {/* Scroll indicator */}
+          <div className="mt-6 animate-bounce">
+            <ArrowDown className="w-6 h-6 text-yellow-300 mx-auto" />
           </div>
         </div>
 
