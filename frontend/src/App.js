@@ -174,6 +174,12 @@ function App() {
                 )
               }
             />
+            <Route
+              path="/directory"
+              element={
+                token ? <Directory /> : <Navigate to="/" replace />
+              }
+            />
           </Routes>
           <Toaster position="top-center" richColors />
         </div>
