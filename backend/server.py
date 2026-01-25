@@ -466,6 +466,86 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# ==================== PASSWORD RESET ====================
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: dict):
+    """Request a password reset token"""
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        # Don't reveal if email exists for security
+        return {"message": "If an account exists with this email, a reset token has been generated."}
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())[:8].upper()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store reset token
+    await db.password_resets.delete_many({"email": email})  # Remove old tokens
+    await db.password_resets.insert_one({
+        "email": email,
+        "token": reset_token,
+        "expires_at": expires_at.isoformat(),
+        "used": False
+    })
+    
+    return {
+        "message": "Password reset token generated",
+        "reset_token": reset_token,
+        "expires_in": "1 hour",
+        "note": "For pilot: Use this token to reset your password. In production, this would be emailed."
+    }
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: dict):
+    """Reset password using token"""
+    email = data.get("email")
+    token = data.get("token", "").upper()
+    new_password = data.get("new_password")
+    
+    if not all([email, token, new_password]):
+        raise HTTPException(status_code=400, detail="Email, token, and new password are required")
+    
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find and validate token
+    reset_record = await db.password_resets.find_one({
+        "email": email,
+        "token": token,
+        "used": False
+    })
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check expiration
+    expires_at = datetime.fromisoformat(reset_record["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    # Update password
+    new_hash = get_password_hash(new_password)
+    result = await db.users.update_one(
+        {"email": email},
+        {"$set": {"password_hash": new_hash}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to update password")
+    
+    # Mark token as used
+    await db.password_resets.update_one(
+        {"_id": reset_record["_id"]},
+        {"$set": {"used": True}}
+    )
+    
+    return {"message": "Password successfully reset. You can now login with your new password."}
+
 # ==================== BRICK AI CHATBOT ====================
 
 SYSTEM_MESSAGE = """You are BRICK, a trauma-responsive AI caseworker helping unhoused individuals in Las Vegas navigate their path to stability.
