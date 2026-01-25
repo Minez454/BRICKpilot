@@ -202,50 +202,62 @@ export default function Directory() {
 
       {/* Organization Grid */}
       <div className="container mx-auto px-4 py-8">
-        <p className="text-white mb-4 font-medium">{filteredOrgs.length} organizations found</p>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrgs.map(org => {
-            const colors = getColorClasses(org.color);
-            return (
-              <Card 
-                key={org.id} 
-                className={`border-2 ${colors.border} hover:shadow-2xl transition-all cursor-pointer overflow-hidden`}
-                onClick={() => setSelectedOrg(org)}
-                data-testid={`org-card-${org.id}`}
-              >
-                <div className={`h-2 ${colors.bg}`}></div>
-                <CardHeader className={colors.light}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 ${colors.bg} rounded-xl flex items-center justify-center shadow-lg`}>
-                        <Building2 className="h-6 w-6 text-white" />
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-white text-lg">Loading organizations...</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-white mb-4 font-medium">{filteredOrgs.length} organizations found</p>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredOrgs.map(org => {
+                const colors = getColorClasses(getOrgColor(org));
+                return (
+                  <Card 
+                    key={org.id} 
+                    className={`border-2 ${colors.border} hover:shadow-2xl transition-all cursor-pointer overflow-hidden`}
+                    onClick={() => setSelectedOrg(org)}
+                    data-testid={`org-card-${org.id}`}
+                  >
+                    <div className={`h-2 ${colors.bg}`}></div>
+                    <CardHeader className={colors.light}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 ${colors.bg} rounded-xl flex items-center justify-center shadow-lg`}>
+                            <Building2 className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className={`text-lg ${colors.text}`}>{org.name}</CardTitle>
+                            <Badge variant="secondary" className="mt-1 capitalize">
+                              {org.category?.replace(/_/g, " ")}
+                            </Badge>
+                          </div>
+                        </div>
+                        <ChevronRight className={`h-5 w-5 ${colors.text}`} />
                       </div>
-                      <div>
-                        <CardTitle className={`text-lg ${colors.text}`}>{org.name}</CardTitle>
-                        <Badge variant="secondary" className="mt-1 capitalize">
-                          {org.category.replace("_", " ")}
-                        </Badge>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <p className="text-gray-600 text-sm line-clamp-2 mb-4">{org.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {org.services?.slice(0, 3).map((service, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">{service}</Badge>
+                        ))}
+                        {org.services?.length > 3 && (
+                          <Badge variant="outline" className="text-xs">+{org.services.length - 3} more</Badge>
+                        )}
                       </div>
-                    </div>
-                    <ChevronRight className={`h-5 w-5 ${colors.text}`} />
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-gray-600 text-sm line-clamp-2 mb-4">{org.description}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {org.services.slice(0, 3).map((service, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs">{service}</Badge>
-                    ))}
-                    {org.services.length > 3 && (
-                      <Badge variant="outline" className="text-xs">+{org.services.length - 3} more</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      {org.is_coordinated_entry && (
+                        <Badge className="mt-3 bg-emerald-600 text-white">Coordinated Entry Point</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Organization Detail Dialog */}
