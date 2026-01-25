@@ -804,8 +804,9 @@ async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = D
     if current_user.role not in ["cleanup_crew", "caseworker", "agency_staff"]:
         raise HTTPException(status_code=403, detail="Only cleanup crews can post sweeps")
     
+    sweep_id = str(uuid.uuid4())
     sweep = {
-        "id": str(uuid.uuid4()),
+        "id": sweep_id,
         "location": sweep_data.get("location"),
         "date": sweep_data.get("date"),
         "time": sweep_data.get("time"),
@@ -820,7 +821,7 @@ async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = D
     # Create notifications for ALL regular users
     all_users = await db.users.find({"role": "user"}, {"_id": 0, "id": 1}).to_list(10000)
     
-    notifications = []
+    notifications_count = 0
     for user in all_users:
         notification = {
             "id": str(uuid.uuid4()),
@@ -832,7 +833,7 @@ async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = D
             "read": False,
             "action_url": "/resources",
             "metadata": {
-                "sweep_id": sweep["id"],
+                "sweep_id": sweep_id,
                 "location": sweep_data.get("location"),
                 "date": sweep_data.get("date"),
                 "time": sweep_data.get("time"),
@@ -840,12 +841,11 @@ async def create_cleanup_sweep_prefixed(sweep_data: dict, current_user: User = D
             },
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        notifications.append(notification)
+        await db.notifications.insert_one(notification)
+        notifications_count += 1
     
-    if notifications:
-        await db.notifications.insert_many(notifications)
-    
-    return {"sweep": sweep, "notifications_sent": len(notifications)}
+    # Return without MongoDB _id
+    return {"sweep_id": sweep_id, "location": sweep["location"], "notifications_sent": notifications_count}
 
 # ==================== LEGAL CASES ====================
 
